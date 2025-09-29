@@ -184,8 +184,13 @@ end
 
 #_________#
 
-
-
+# TO DO:
+# 1) using counts table from above, run simulations on reference dataset + count occurances of all motifs (say sim depth = 1000 for now)
+# 1.5) find significant motifs base on these simulations
+# 2) filter the motif table from above and then filter the positions table based on the filtered count table
+# 3) using the filtered significant motifs positions table, then draw local edges for cdr3s with:
+#   a) same length
+#   b) motif appearance has max overlap difference of x amino acids
 
 #_________#
 
