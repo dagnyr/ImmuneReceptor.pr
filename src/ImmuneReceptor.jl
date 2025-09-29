@@ -150,7 +150,9 @@ function get_motif_new(st_::AbstractVector{<:AbstractString}, min::Int, max::Int
 
     mo_ = Dict(i => Dict{String,Int}() for i in min:max) # make dictionary
 
-    for s1 in st_
+    positions = Dict(k => Dict{String,Dict{Int,Vector{Int}}}() for k in min:max) # add way to track starting index of motif for edges later on
+
+    for (index, s1) in enumerate(st_) # store index of cdr3 for position tracking
 
         lastindex(s1) < 7 && continue # only keep cdr3 7 or longer
 
@@ -165,7 +167,10 @@ function get_motif_new(st_::AbstractVector{<:AbstractString}, min::Int, max::Int
             while i2 < lastindex(s2)
 
                 m = s2[(i1+=1):(i2+=1)] # get the motif
-                mo_[um][m] = get(mo_[um], m, 0) + 1 # count motif occurances
+                mo_[um][m] = get!(mo_[um], m, 0) + 1 # count motif occurances
+
+                map = get!(positions[um], m, Dict{Int,Vector{Int}}()) # add motif into positions dictionary
+                push!(get!(map, index, Int[]), i1) # add index of cdr3 w/ starting position of motif (i1)
 
             end
 
@@ -173,18 +178,9 @@ function get_motif_new(st_::AbstractVector{<:AbstractString}, min::Int, max::Int
 
     end
 
-    return mo_
+    return mo_, positions
 
 end
-
-#function count_motif(listofstrings)
-# TO DO:
-# - for every motif -> count occurances of each motif through each mo_ motif length pool.
-# also note (make dictionary) length of the CDR3 AND index of each occurance of each motif in the string.
-# later, use this index + length to helo draw local edges (draw edge if length is same, motif is roughly in same position)
-#end
-
-
 
 #_________#
 
