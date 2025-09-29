@@ -112,13 +112,13 @@ function make_distance(st_)
 
     u2 = div(u1 * (u1 - 1), 2)
 
-    in__ = Vector{Tuple{Int, Int}}(undef, u2)
+    in__ = Vector{Tuple{Int,Int}}(undef, u2)
 
     po_ = Vector{Int}(undef, u2)
 
     i1 = 0
 
-    @showprogress for i2 in 1:u1, i3 in (i2 + 1):u1
+    @showprogress for i2 in 1:u1, i3 in (i2+1):u1
 
         s1 = st_[i2]
 
@@ -130,7 +130,7 @@ function make_distance(st_)
 
         end
 
-        in__[i1 += 1] = i2, i3
+        in__[i1+=1] = i2, i3
 
         po_[i1] = make_hamming_distance(s1, s2)
 
@@ -146,37 +146,31 @@ end
 
 # to do - make um a range from min to max motif size + add loop to find motifs in this range
 
-function make_strings(min, max)
-    Dict(i => String[] for i in min:max)
-end
-
-# TO DO: modify the get motif function below so we can use the list of motifs below - maybe call it count motif?
 function get_motif_new(st_::AbstractVector{<:AbstractString}, min::Int, max::Int)
 
-    mo_ = make_strings(min, max)
+    mo_ = Dict(i => Dict{String,Int}() for i in min:max) # make dictionary
 
     for s1 in st_
 
-        lastindex(s1) < 7 && continue
+        lastindex(s1) < 7 && continue # only keep cdr3 7 or longer
 
-        s2 = s1[4:(end - 3)]
+        s2 = s1[4:(end-3)] # remove first and last 3 aa
         for um in min:max
 
-            um > lastindex(s2) && continue
+            um > lastindex(s2) && continue # make sure cdr3 is logner than the motif size
 
             i1 = 0
             i2 = i1 + um - 1
 
-            while i2 <= lastindex(s2)
-                push!(mo_[um], s2[(i1 += 1):(i2 += 1)])
+            while i2 < lastindex(s2)
+
+                m = s2[(i1+=1):(i2+=1)] # get the motif
+                mo_[um][m] = get(mo_[um], m, 0) + 1 # count motif occurances
+
             end
 
         end
 
-    end
-
-    for um in keys(mo_)
-        unique(mo_[um])
     end
 
     return mo_
@@ -196,7 +190,7 @@ end
 
 function get_motif(s1::AbstractString, um)
 
-    s2 = s1[4:(end - 3)]
+    s2 = s1[4:(end-3)]
 
     # TODO: Use Set
     st_ = String[]
@@ -207,7 +201,7 @@ function get_motif(s1::AbstractString, um)
 
     while i2 < lastindex(s2)
 
-        push!(st_, s2[(i1 += 1):(i2 += 1)])
+        push!(st_, s2[(i1+=1):(i2+=1)])
 
     end
 
@@ -217,7 +211,7 @@ end
 
 function get_motif(st__, u1)
 
-    di = Dict{String, Int}()
+    di = Dict{String,Int}()
 
     for nd in eachindex(st__), st in st__[nd]
 
