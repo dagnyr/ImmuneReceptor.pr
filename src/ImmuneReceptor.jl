@@ -184,6 +184,11 @@ end
 
 #_________#
 
+
+
+
+#_________#
+
 function get_motif(s1::AbstractString, um)
 
     s2 = s1[4:(end-3)]
