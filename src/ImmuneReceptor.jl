@@ -150,9 +150,7 @@ function get_motif_new(st_::AbstractVector{<:AbstractString}, min::Int, max::Int
 
     mo_ = Dict(i => Dict{String,Int}() for i in min:max) # make dictionary
 
-    positions = Dict(k => Dict{String,Dict{Int,Vector{Int}}}() for k in min:max) # add way to track starting index of motif for edges later on
-
-    for (index, s1) in enumerate(st_) # store index of cdr3 for position tracking
+    for s1 in st_
 
         lastindex(s1) < 7 && continue # only keep cdr3 7 or longer
 
@@ -167,10 +165,7 @@ function get_motif_new(st_::AbstractVector{<:AbstractString}, min::Int, max::Int
             while i2 < lastindex(s2)
 
                 m = s2[(i1+=1):(i2+=1)] # get the motif
-                mo_[um][m] = get!(mo_[um], m, 0) + 1 # count motif occurances
-
-                map = get!(positions[um], m, Dict{Int,Vector{Int}}()) # add motif into positions dictionary
-                push!(get!(map, index, Int[]), i1) # add index of cdr3 w/ starting position of motif (i1)
+                mo_[um][m] = get!(mo_[um], m, 0) + 1 # count total motif occurances
 
             end
 
@@ -178,11 +173,13 @@ function get_motif_new(st_::AbstractVector{<:AbstractString}, min::Int, max::Int
 
     end
 
-    return mo_, positions
+    mo_  = Dict(um => Dict(m => num for (m,num) in d if num >= 3) for (um,d) in mo_) # cutoff of 3
+    return mo_
 
 end
 
-function is_motif_present(motif::AbstractVector{<:AbstractString}, cdrs::AbstractVector{<:AbstractString})
+# count whether motif is present at least once per cdr3 for all cdr3s
+function get_motif_counts(motif::AbstractVector{<:AbstractString}, cdrs::AbstractVector{<:AbstractString})
 
     motif_counts = Dict{String,Int}()
 
@@ -195,6 +192,27 @@ function is_motif_present(motif::AbstractVector{<:AbstractString}, cdrs::Abstrac
     return motif_counts
 
 end
+
+find_significant_motifs()
+
+    # set seed
+
+    # make or initialzie table w/ correct size (motifs x simultion depth+1)
+
+    # count motifs for original cdr3s
+
+    # for simulation depth times (eg 1000), collect n random cdr3s
+
+        # use get_motif_counts to get counts
+
+        # store in matrix
+
+    # end
+
+    # calculate p-val for each motif
+
+end
+
 
 #_________#
 
