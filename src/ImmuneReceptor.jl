@@ -193,23 +193,26 @@ function get_motif_counts(motif::AbstractVector{<:AbstractString}, cdrs::Abstrac
 
 end
 
-find_significant_motifs()
+find_significant_motifs(motifs, cdrs1, cdrs2)
 
-    # set seed
+    seed = 1
 
-    # make or initialzie table w/ correct size (motifs x simultion depth+1)
+    counts = zeros(length(motifs), 1000)
 
-    # count motifs for original cdr3s
+    counts_orig = get_motif_counts(motifs, cdrs1)
 
     # for simulation depth times (eg 1000), collect n random cdr3s
 
-        # use get_motif_counts to get counts
+    for i in 1000
 
-        # store in matrix
+        random sample n number of cdr3s
+        counts[i] = get_motif_counts(motifs, random_cdrs)
 
-    # end
+    end
 
-    # calculate p-val for each motif
+    # count number of times sim count exceeds actual count for each row (which is each motif)
+    # calculate p-val
+    # get row index of every p-val that exceeds cutoff and return motifs w/ matching indices
 
 end
 
