@@ -112,13 +112,13 @@ function make_distance(st_)
 
     u2 = div(u1 * (u1 - 1), 2)
 
-    in__ = Vector{Tuple{Int, Int}}(undef, u2)
+    in__ = Vector{Tuple{Int,Int}}(undef, u2)
 
     po_ = Vector{Int}(undef, u2)
 
     i1 = 0
 
-    @showprogress for i2 in 1:u1, i3 in (i2 + 1):u1
+    @showprogress for i2 in 1:u1, i3 in (i2+1):u1
 
         s1 = st_[i2]
 
@@ -130,7 +130,7 @@ function make_distance(st_)
 
         end
 
-        in__[i1 += 1] = i2, i3
+        in__[i1+=1] = i2, i3
 
         po_[i1] = make_hamming_distance(s1, s2)
 
@@ -148,15 +148,15 @@ end
 
 function get_motif_new(st_::AbstractVector{<:AbstractString}, min::Int, max::Int)
 
-    mo_ = Dict(i => Dict{String, Int}() for i in min:max) # make dictionary
+    mo_ = Dict(i => Dict{String,Int}() for i in min:max) # make dictionary
 
-    positions = Dict(k => Dict{String, Dict{Int, Vector{Int}}}() for k in min:max) # add way to track starting index of motif for edges later on
+    positions = Dict(k => Dict{String,Dict{Int,Vector{Int}}}() for k in min:max) # add way to track starting index of motif for edges later on
 
     for (index, s1) in enumerate(st_) # store index of cdr3 for position tracking
 
         lastindex(s1) < 7 && continue # only keep cdr3 7 or longer
 
-        s2 = s1[4:(end - 3)] # remove first and last 3 aa
+        s2 = s1[4:(end-3)] # remove first and last 3 aa
         for um in min:max
 
             um > lastindex(s2) && continue # make sure cdr3 is logner than the motif size
@@ -166,10 +166,10 @@ function get_motif_new(st_::AbstractVector{<:AbstractString}, min::Int, max::Int
 
             while i2 < lastindex(s2)
 
-                m = s2[(i1 += 1):(i2 += 1)] # get the motif
+                m = s2[(i1+=1):(i2+=1)] # get the motif
                 mo_[um][m] = get!(mo_[um], m, 0) + 1 # count motif occurances
 
-                map = get!(positions[um], m, Dict{Int, Vector{Int}}()) # add motif into positions dictionary
+                map = get!(positions[um], m, Dict{Int,Vector{Int}}()) # add motif into positions dictionary
                 push!(get!(map, index, Int[]), i1) # add index of cdr3 w/ starting position of motif (i1)
 
             end
@@ -179,6 +179,20 @@ function get_motif_new(st_::AbstractVector{<:AbstractString}, min::Int, max::Int
     end
 
     return mo_, positions
+
+end
+
+function is_motif_present(motif::AbstractVector{<:AbstractString}, cdrs::AbstractVector{<:AbstractString})
+
+    motif_counts = Dict{String,Int}()
+
+    for m in motif
+
+        motif_counts[m] = count(cdr -> occursin(m, cdr), cdrs)
+
+    end
+
+    return motif_counts
 
 end
 
@@ -192,11 +206,22 @@ end
 #   a) same length
 #   b) motif appearance has max overlap difference of x amino acids
 
+
+# function get_significant_motifs ()
+# set seed
+# create table - first col is original counts
+# subsample reference dataset w/ same size of sample dataset
+# count motifs
+# filter table to only include motifs in original counts dataset
+# compare how many times simulation beats actual dataset
+# end
+
+
 #_________#
 
 function get_motif(s1::AbstractString, um)
 
-    s2 = s1[4:(end - 3)]
+    s2 = s1[4:(end-3)]
 
     # TODO: Use Set
     st_ = String[]
@@ -207,7 +232,7 @@ function get_motif(s1::AbstractString, um)
 
     while i2 < lastindex(s2)
 
-        push!(st_, s2[(i1 += 1):(i2 += 1)])
+        push!(st_, s2[(i1+=1):(i2+=1)])
 
     end
 
@@ -217,7 +242,7 @@ end
 
 function get_motif(st__, u1)
 
-    di = Dict{String, Int}()
+    di = Dict{String,Int}()
 
     for nd in eachindex(st__), st in st__[nd]
 
