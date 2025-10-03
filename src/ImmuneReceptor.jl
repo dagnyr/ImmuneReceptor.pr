@@ -145,7 +145,10 @@ end
 # =============================================================================================== #
 
 # count whether motif is present at least once per cdr3 for all cdr3s
-function get_motif_counts(motif::AbstractVector{<:AbstractString}, cdrs::AbstractVector{<:AbstractString})
+function get_motif_counts(
+    motif::AbstractVector{<:AbstractString},
+    cdrs::AbstractVector{<:AbstractString},
+)
 
     motif_counts = Dict{String,Int}()
 
@@ -162,7 +165,7 @@ end
 # makes list of motifs in cdr3s, counts them, filters based on a cutoff, then provides set count
 function get_motifs(st_::AbstractVector{<:AbstractString}, min::Int, max::Int)
 
-    mo_ = Dict(i => Dict{String,Int}() for i in min:max) # make dictionary
+    mo_ = Dict{String,Int}() # make dictionary
 
     for s1 in st_
 
@@ -179,7 +182,7 @@ function get_motifs(st_::AbstractVector{<:AbstractString}, min::Int, max::Int)
             while i2 < lastindex(s2)
 
                 m = s2[(i1+=1):(i2+=1)] # get the motif
-                mo_[um][m] = get!(mo_[um], m, 0) + 1 # count total motif occurances
+                mo_[m] = get!(mo_, m, 0) + 1 # count total motif occurances
 
             end
 
@@ -187,7 +190,7 @@ function get_motifs(st_::AbstractVector{<:AbstractString}, min::Int, max::Int)
 
     end
 
-    mo_ = Dict(um => Dict(m => num for (m, num) in d if num >= 3) for (um, d) in mo_) # cutoff of 3
+    mo_ = Dict(m => num for (m, num) in mo_ if num >= 3) # cutoff of 3
     mo2_ = get_motif_counts(collect(keys(mo_)), st_)
     return mo2_
 
