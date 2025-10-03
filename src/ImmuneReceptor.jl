@@ -242,6 +242,36 @@ end
 
 #_________#
 
+# takes list of cdrs and checks for a motif, making pairs
+function make_motif_pairs(st_::AbstractVector{<:AbstractString}, motif)
+    u1 = lastindex(st_)
+    u2 = div(u1 * (u1 - 1), 2)
+
+    in__ = Vector{Tuple{Int,Int}}(undef, u2)
+    po_  = Vector{Int}(undef, u2)
+
+    i1 = 0
+
+    for i2 in 1:u1, i3 in (i2+1):u1
+        s1, s2 = st_[i2], st_[i3]
+
+        has1 = occursin(motif, s1)
+        has2 = occursin(motif, s2)
+
+        if has1 && has2
+            i1 += 1
+            in__[i1] = (i2, i3)
+            po_[i1] = 1
+        end
+    end
+
+    resize!(in__, i1)
+    resize!(po_, i1)
+
+    return in__, po_
+end
+
+
 # TO DO:
 # 1) using counts table from above, run simulations on reference dataset + count occurances of all motifs (say sim depth = 1000 for now) ✅
 # 1.5) find significant motifs base on these simulations ✅
@@ -331,9 +361,10 @@ function add_global_edge!(g, u, v, distance::Int64)
     set_prop!(g, (u, v), :distance, distance)
 end
 
-function add_local_edge!(g, u, v, pval::Int64)
+function add_local_edge!(g, u, v, motif::String, pval::Int64)
     add_edge!(g, u, v)
     set_prop!(g, (u, v), :type, "local")
+    set_prop!(g, (u, v), :motif, motif)
     set_prop!(g, (u, v), :pval, pval)
 end
 
@@ -351,7 +382,19 @@ function make_edges(cdrs, motifs)
     end
 
     # TODO: next do local edges
+    for (m, pval) in motifs
+        pairs2, hasmotif = make_motif_pairs(cdrs.cdr3, m)
 
+        for (index, (cdr1, cdr2)) in enumerate(pairs2)
+            if hasmotif[index] == 1
+                add_local_edge!(g, cdr1, cdr2, m, pval)
+            end
+
+        end
+
+    end
+
+    return g
 
 end
 
