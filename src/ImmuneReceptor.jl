@@ -34,6 +34,19 @@ function is_cdr3(st)
 
 end
 
+function load_cdr3s(csvpath,)
+    df = CSV.read(csvpath),DataFrame)
+    filtered_df = df[
+        (df.chain .∈ ["TRG","TRD","TRA","TRB"]) .&
+        .!(df.tcr_gene .∈ ["None", "none","NA", "na", " "]) .&
+        .!(df.cdr3 .∈ ["None", "none","NA", "na", " "]) .&
+        startswith.(df.cdr3, "C") .&
+        endswith.(df.cdr3, "F"),
+    :]
+    filtered_df_2 = combine(groupby(filtered_df, :cdr3), nrow => :cdr3_count)
+    return filtered_df_2
+end
+
 # =============================================================================================== #
 # Writing
 # =============================================================================================== #
@@ -330,19 +343,6 @@ end
 # Graphing
 # =============================================================================================== #
 
-function load_cdr3s(csvpath,)
-    df = CSV.read(csvpath),DataFrame)
-    filtered_df = df[
-        (df.chain .∈ ["TRG","TRD","TRA","TRB"]) .&
-        .!(df.tcr_gene .∈ ["None", "none","NA", "na", " "]) .&
-        .!(df.cdr3 .∈ ["None", "none","NA", "na", " "]) .&
-        startswith.(df.cdr3, "C") .&
-        endswith.(df.cdr3, "F"),
-    :]
-    filtered_df_2 = combine(groupby(filtered_df, :cdr3), nrow => :cdr3_count)
-    return filtered_df_2
-end
-
 function add_vertices!(g, cdrs)
     for vertex in 1:nv(g)
         set_prop!(g, vertex, :label, cdrs.cdr3[vertex])
@@ -398,21 +398,6 @@ function make_edges(cdrs, motifs)
 
 end
 
-# make local edges (need to check shared mot
-#
-#
-#
-#
-#
-#
-#
-#
-#
-# ifs)
-
-
-
-# make global edges (need hamming distances)
 
 # =============================================================================================== #
 # Clusters / Significance
