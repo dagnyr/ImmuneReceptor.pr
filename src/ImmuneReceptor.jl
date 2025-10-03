@@ -154,7 +154,7 @@ function get_motif_counts(
 
     for m in motif
 
-        motif_counts[m] = count(cdr -> occursin(m, cdr), cdrs)
+        motif_counts[m] = count(cdr -> occursin(m, cdr), cdrs) # count occurances per cdr3 for each motif
 
     end
 
@@ -294,3 +294,77 @@ function get_motif(st__, u1)
 end
 
 end
+
+
+# =============================================================================================== #
+# Graphing
+# =============================================================================================== #
+
+function load_cdr3s(csvpath,)
+    df = CSV.read(csvpath),DataFrame)
+    filtered_df = df[
+        (df.chain .∈ ["TRG","TRD","TRA","TRB"]) .&
+        .!(df.tcr_gene .∈ ["None", "none","NA", "na", " "]) .&
+        .!(df.cdr3 .∈ ["None", "none","NA", "na", " "]) .&
+        startswith.(df.cdr3, "C") .&
+        endswith.(df.cdr3, "F"),
+    :]
+    filtered_df_2 = combine(groupby(filtered_df, :cdr3), nrow => :cdr3_count)
+    return filtered_df_2
+end
+
+function add_vertices!(g, cdrs)
+    for vertex in 1:nv(g)
+        set_prop!(g, vertex, :label, cdrs.cdr3[vertex])
+        set_prop!(g, vertex, :v_gene, cdrs.v_gene[vertex])
+        set_prop!(g, vertex, :j_gene, cdrs.j_gene[vertex])
+        if !(cdrs.d_gene[vertex] in ["None", "none", "NA", "na", " "])
+            set_prop!(g, vertex, :d_gene, cdrs.d_gene[vertex])
+        end
+    end
+    return g
+end
+
+function add_global_edge!(g, u, v, distance::Int64)
+    add_edge!(g, u, v)
+    set_prop!(g, (u, v), :type, "global")
+    set_prop!(g, (u, v), :distance, distance)
+end
+
+function add_local_edge!(g, u, v, pval::Int64)
+    add_edge!(g, u, v)
+    set_prop!(g, (u, v), :type, "local")
+    set_prop!(g, (u, v), :pval, pval)
+end
+
+function make_edges(cdrs, motifs)
+
+end
+
+# make local edges (need to check shared mot
+#
+#
+#
+#
+#
+#
+#
+#
+#
+# ifs)
+
+
+
+# make global edges (need hamming distances)
+
+# =============================================================================================== #
+# Clusters / Significance
+# =============================================================================================== #
+
+# length score
+# for each group, resample 1000 groups of group size n and measure cdr3 length distribution.
+
+# v gene score
+# hyper geomtric or parameteric when over 200 sequences in one group
+
+# hla score
