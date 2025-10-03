@@ -338,6 +338,20 @@ function add_local_edge!(g, u, v, pval::Int64)
 end
 
 function make_edges(cdrs, motifs)
+    g = MetaGraph(Graph(length(cdrs)))
+    g = add_vertices(g, cdrs)
+
+    # start w/ global distances
+    pairs, dists = make_distance(cdrs.cdr3)
+    for (index, (cdr1, cdr2)) in enumerate(pairs)
+        d = dists[index]
+        if dists[index] <= 1
+            add_global_edge!(g, cdr1, cdr2, dists[index])
+        end
+    end
+
+    # TODO: next do local edges
+
 
 end
 
