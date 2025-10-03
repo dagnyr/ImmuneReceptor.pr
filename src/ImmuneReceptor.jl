@@ -173,7 +173,7 @@ function get_motif_new(st_::AbstractVector{<:AbstractString}, min::Int, max::Int
 
     end
 
-    mo_  = Dict(um => Dict(m => num for (m,num) in d if num >= 3) for (um,d) in mo_) # cutoff of 3
+    mo_ = Dict(um => Dict(m => num for (m, num) in d if num >= 3) for (um, d) in mo_) # cutoff of 3
     return mo_
     # edit to return table with motif, total counts, and number of cdr3 containing motif w/ get motif counts
 
@@ -197,31 +197,33 @@ end
 # input will be motif_counts dictionary/table
 # # TO DO: motify motifs to take dictionary output from get_motif_new and grab keys and values
 # TO DO 2: modify to incoporate the fact that get_motif_counts also has dictionary output and will need to collect keys and values for later calculations
-find_significant_motifs(motifs, cdrs1, cdrs2)
+function find_significant_motifs(motifs, cdrs1, cdrs2)
 
-    Random.seed! = 1
+    Random.seed!(1)
 
-    counts_sim = Array{Float64}(undef, 1000, length(motifs))
+    motifs_list = collect(keys(motifs))
+    counts_orig = collect(values(motifs))
 
-    counts_orig = get_motif_counts(motifs, cdrs1)
+    counts_sim = Array{Float64}(undef, 1000, length(motifs_list))
 
     significant_motifs = Dict{String,Float64}()
 
     for i in 1:1000
 
         random_cdrs = sample(cdrs2, length(cdrs1); replace=true, ordered=false)
-        counts_sim[i, :] = get_motif_counts(motifs, random_cdrs)
+        random_counts = get_motif_counts(motifs_list, random_cdrs)
+        counts_sim[i, :] = collect(values(random_counts))
 
     end
 
-    for (index, m) in enumerate(motifs)
+    for (index, m) in enumerate(motifs_list)
         ove = counts_orig[index] / mean(counts_sim[:, index])
 
         if counts_orig[index] < 2
             continue
         elseif (counts_orig[index] == 2 && ove >= 1000) ||
-                (counts_orig[index] == 3 && ove >= 100)  ||
-                (counts_orig[index] >= 4 && ove >= 10)
+               (counts_orig[index] == 3 && ove >= 100) ||
+               (counts_orig[index] >= 4 && ove >= 10)
 
             wins = count(x -> x >= counts_orig[index], counts_sim[:, index])
             p_val = (wins + 1) / (1000 + 1)
