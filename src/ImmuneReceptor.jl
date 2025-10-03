@@ -175,6 +175,7 @@ function get_motif_new(st_::AbstractVector{<:AbstractString}, min::Int, max::Int
 
     mo_  = Dict(um => Dict(m => num for (m,num) in d if num >= 3) for (um,d) in mo_) # cutoff of 3
     return mo_
+    # edit to return table with motif, total counts, and number of cdr3 containing motif w/ get motif counts
 
 end
 
@@ -193,28 +194,54 @@ function get_motif_counts(motif::AbstractVector{<:AbstractString}, cdrs::Abstrac
 
 end
 
+# input will be motif_counts dictionary/table
+# # TO DO: motify motifs to take dictionary output from get_motif_new and grab keys and values
+# TO DO 2: modify to incoporate the fact that get_motif_counts also has dictionary output and will need to collect keys and values for later calculations
 find_significant_motifs(motifs, cdrs1, cdrs2)
 
-    seed = 1
+    Random.seed! = 1
 
-    counts = zeros(length(motifs), 1000)
+    counts_sim = Array{Float64}(undef, 1000, length(motifs))
 
     counts_orig = get_motif_counts(motifs, cdrs1)
 
-    # for simulation depth times (eg 1000), collect n random cdr3s
+    significant_motifs = Dict{String,Float64}()
 
-    for i in 1000
+    for i in 1:1000
 
-        random sample n number of cdr3s
-        counts[i] = get_motif_counts(motifs, random_cdrs)
+        random_cdrs = sample(cdrs2, length(cdrs1); replace=true, ordered=false)
+        counts_sim[i, :] = get_motif_counts(motifs, random_cdrs)
 
     end
 
-    # count number of times sim count exceeds actual count for each row (which is each motif)
-    # calculate p-val
-    # get row index of every p-val that exceeds cutoff and return motifs w/ matching indices
+    for (index, m) in enumerate(motifs)
+        ove = counts_orig[index] / mean(counts_sim[:, index])
+
+        if counts_orig[index] < 2
+            continue
+        elseif (counts_orig[index] == 2 && ove >= 1000) ||
+                (counts_orig[index] == 3 && ove >= 100)  ||
+                (counts_orig[index] >= 4 && ove >= 10)
+
+            wins = count(x -> x >= counts_orig[index], counts_sim[:, index])
+            p_val = (wins + 1) / (1000 + 1)
+            if p_val >= 0.05
+                significant_motifs[m] = get!(significant_motifs, m, 0.0) + p_val
+            end
+
+        end
+
+    end
+
+    return significant_motifs
 
 end
+
+
+# count number of times sim count exceeds actual count for each row (which is each motif)
+# calculate p-val
+# get row index of every p-val that exceeds cutoff and return motifs w/ matching indices
+
 
 
 #_________#
