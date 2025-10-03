@@ -144,9 +144,23 @@ end
 # Motif
 # =============================================================================================== #
 
-# to do - make um a range from min to max motif size + add loop to find motifs in this range
+# count whether motif is present at least once per cdr3 for all cdr3s
+function get_motif_counts(motif::AbstractVector{<:AbstractString}, cdrs::AbstractVector{<:AbstractString})
 
-function get_motif_new(st_::AbstractVector{<:AbstractString}, min::Int, max::Int)
+    motif_counts = Dict{String,Int}()
+
+    for m in motif
+
+        motif_counts[m] = count(cdr -> occursin(m, cdr), cdrs)
+
+    end
+
+    return motif_counts
+
+end
+
+# makes list of motifs in cdr3s, counts them, filters based on a cutoff, then provides set count
+function get_motifs(st_::AbstractVector{<:AbstractString}, min::Int, max::Int)
 
     mo_ = Dict(i => Dict{String,Int}() for i in min:max) # make dictionary
 
@@ -174,29 +188,12 @@ function get_motif_new(st_::AbstractVector{<:AbstractString}, min::Int, max::Int
     end
 
     mo_ = Dict(um => Dict(m => num for (m, num) in d if num >= 3) for (um, d) in mo_) # cutoff of 3
-    return mo_
-    # edit to return table with motif, total counts, and number of cdr3 containing motif w/ get motif counts
-
-end
-
-# count whether motif is present at least once per cdr3 for all cdr3s
-function get_motif_counts(motif::AbstractVector{<:AbstractString}, cdrs::AbstractVector{<:AbstractString})
-
-    motif_counts = Dict{String,Int}()
-
-    for m in motif
-
-        motif_counts[m] = count(cdr -> occursin(m, cdr), cdrs)
-
-    end
-
-    return motif_counts
+    mo2_ = get_motif_counts(collect(keys(mo_)), st_)
+    return mo2_
 
 end
 
 # input will be motif_counts dictionary/table
-# # TO DO: motify motifs to take dictionary output from get_motif_new and grab keys and values
-# TO DO 2: modify to incoporate the fact that get_motif_counts also has dictionary output and will need to collect keys and values for later calculations
 function find_significant_motifs(motifs, cdrs1, cdrs2)
 
     Random.seed!(1)
@@ -240,32 +237,15 @@ function find_significant_motifs(motifs, cdrs1, cdrs2)
 end
 
 
-# count number of times sim count exceeds actual count for each row (which is each motif)
-# calculate p-val
-# get row index of every p-val that exceeds cutoff and return motifs w/ matching indices
-
-
-
 #_________#
 
 # TO DO:
-# 1) using counts table from above, run simulations on reference dataset + count occurances of all motifs (say sim depth = 1000 for now)
-# 1.5) find significant motifs base on these simulations
-# 2) filter the motif table from above and then filter the positions table based on the filtered count table
+# 1) using counts table from above, run simulations on reference dataset + count occurances of all motifs (say sim depth = 1000 for now) ✅
+# 1.5) find significant motifs base on these simulations ✅
+# 2) filter the motif table from above and then filter the positions table based on the filtered count table (NOT DOING POSITION TRACKING FOR NOW) ❎
 # 3) using the filtered significant motifs positions table, then draw local edges for cdr3s with:
 #   a) same length
 #   b) motif appearance has max overlap difference of x amino acids
-
-
-# function get_significant_motifs ()
-# set seed
-# create table - first col is original counts
-# subsample reference dataset w/ same size of sample dataset
-# count motifs
-# filter table to only include motifs in original counts dataset
-# compare how many times simulation beats actual dataset
-# end
-
 
 #_________#
 
