@@ -422,7 +422,7 @@ function make_local_edges(cdrs, motifs)
     g = MetaGraph(Graph(length(cdrs)))
     g = add_vertices(g, cdrs)
 
-    # locak edge making
+    # local edge making
     for (m, pval) in motifs
         pairs2, hasmotif = make_motif_pairs(cdrs.cdr3, m)
 
@@ -455,13 +455,15 @@ using StatsBase: mode
 function score_lengths(g, cdrs2)
     clusters = connected_components(g)
 
+    # TO DO GET PROPERTY LAB FROM EACH VERTEX get_prop(g, vertex_id, :label)
+
     modes = Vector{Int}()
     props = Vector{Float64}()
 
     # get most common length for each cluster
-    for (i, cluster) in  enumerate(clusters)
-
-        cluster_lengths = [length(s) for s in cluster]
+    for cluster in clusters
+        labels = get_prop(g, v, :label) for v in cluster # fixed this to get labels
+        cluster_lengths = [length(s) for s in labels]
         m = mode(cluster_lengths)
         push!(modes, m)
         push!(props, count(==(m), cluster_lengths) / length(cluster))
@@ -470,16 +472,16 @@ function score_lengths(g, cdrs2)
 
     # randomly pick n sequences from the null distribution and compare to
     cluster_sizes = [length(cluster) for cluster in clusters]
-    p_vals = []
+    p_vals = Float64[]
 
     for (index, size) in enumerate(cluster_sizes)
 
-        sim_props = []
+        sim_props = Float64[]
 
         for i in 1:1000
             random_cdrs = sample(cdrs2, size; replace=true, ordered=false)
             cluster_lengths = [length(s) for s in random_cdrs]
-            sim_props[i] = (count(==(modes[index]), cluster_lengths)) / length(cluster)
+            push!(sim_props, (count(==(modes[index]), cluster_lengths)) / size)
         end
 
         # count number of times sim beats data?
@@ -496,10 +498,44 @@ end
 # v gene score
 # hyper geomtric or parameteric when over 200 sequences in one group
 
+# TO DO: lowkey change entire funtion, took wrong approach
 function score_vgene(g)
     clusters = connected_components(g)
 
-    # make dictionary with every cluster -> list of v-genes for every cdr3
+    # make vector w/ dictionary of vgenes
+    counts = Vector{Dict{String,Int}}(undef, length(clusters))
+    for (index, cluster) in enumerate(clusters)
+        di = Dict{String,Int}()
+        for vertex in cluster
+            vgene = get_prop(g, vertex, :v_gene)
+            di[vgene] = get!(di, vgene, 0) + 1
+        end
+        counts[index] = di
+    end
+
+    props = Vector{Dict{String,Float64}}(undef, length(clusters))
+    for (index, di) in enumerate(counts)
+        total_vgenes = sum(values(di))
+
+        di2 = Dict{String,Int}()
+
+        for (vgene, count) in di
+
+            prop = count / total_vgenes
+            di2[vgene] = get!(di2, vgene, 0) + prop
+
+        end
+
+    end
+
+    # after getting dictionary of vgenes get proportion
+    # after counting the vgenes compare to the count in the null
+
+    # redo count for the null distribution
+
+
+    # make
+    # dictionary with every cluster -> list of v-genes for every cdr3
     # for every cluster, count total occurances and determine if over 200
     # if under 200, calculate p-val for every v-gene and report lowest value + gene
     # if over 200, run simulation 1000 times and count, make pvals, etc. (just like length)
