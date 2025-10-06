@@ -454,7 +454,7 @@ end
 
 using StatsBase: mode
 
-function score_lengths(g, cdrs1, cdrs2)
+function score_lengths(g, cdrs2)
     clusters = connected_components(g)
 
     modes = []
@@ -495,7 +495,22 @@ end
 # v gene score
 # hyper geomtric or parameteric when over 200 sequences in one group
 
-function score_vgene()
+function score_vgene(g)
+    clusters = connected_components(g)
+
+    # make dictionary with every cluster -> list of v-genes for every cdr3
+    # for every cluster, count total occurances and determine if over 200
+    # if under 200, calculate p-val for every v-gene and report lowest value + gene
+    # if over 200, run simulation 1000 times and count, make pvals, etc. (just like length)
+
+
+    if any(c -> c > 200, [length(cluster) for cluster in clusters])
+
+    else
+
+    end
+
+
 
     # first check if any cluster has > 200 members and if so, use empirical calculation
 
@@ -505,4 +520,10 @@ end
 #
 
 function score_hla()
+
+    # use sample or donor id from original csv
+    # load separare hla typing table
+    # figure out best way to determine if a type is enriched - maybe population level HLA distirbution (aka by chance)
+    # or maybe make a random cdr cluster w/ random draws and see HLA typing (might be problematic if few donors in sample)
+
 end
