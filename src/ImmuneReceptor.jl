@@ -355,12 +355,14 @@ function add_vertices!(g, cdrs)
     return g
 end
 
+# make a global edge w/ annotation of hamming disrance
 function add_global_edge!(g, u, v, distance::Int64)
     add_edge!(g, u, v)
     set_prop!(g, (u, v), :type, "global")
     set_prop!(g, (u, v), :distance, distance)
 end
 
+# add a local edge w/ annotation of motif and the pval (from get_significant_motifs)
 function add_local_edge!(g, u, v, motif::String, pval::Int64)
     add_edge!(g, u, v)
     set_prop!(g, (u, v), :type, "local")
@@ -368,6 +370,7 @@ function add_local_edge!(g, u, v, motif::String, pval::Int64)
     set_prop!(g, (u, v), :pval, pval)
 end
 
+# go through cdrs
 function make_edges(cdrs, motifs)
     g = MetaGraph(Graph(length(cdrs)))
     g = add_vertices(g, cdrs)
@@ -398,6 +401,49 @@ function make_edges(cdrs, motifs)
 
 end
 
+# only make global edges
+function make_global_edges(cdrs, motifs)
+    g = MetaGraph(Graph(length(cdrs)))
+    g = add_vertices(g, cdrs)
+
+    # start w/ global distances
+    pairs, dists = make_distance(cdrs.cdr3)
+    for (index, (cdr1, cdr2)) in enumerate(pairs)
+        d = dists[index]
+        if dists[index] <= 1
+            add_global_edge!(g, cdr1, cdr2, dists[index])
+        end
+    end
+
+    return g
+
+end
+
+# only make local edges
+function make_local_edges(cdrs, motifs)
+    g = MetaGraph(Graph(length(cdrs)))
+    g = add_vertices(g, cdrs)
+
+    # locak edge making
+    for (m, pval) in motifs
+        pairs2, hasmotif = make_motif_pairs(cdrs.cdr3, m)
+
+        for (index, (cdr1, cdr2)) in enumerate(pairs2)
+            if hasmotif[index] == 1
+                add_local_edge!(g, cdr1, cdr2, m, pval)
+            end
+
+        end
+
+    end
+
+    return g
+
+end
+
+# to-do return list of communities and generate output file w/ all values
+#components = connected_components(g)
+
 
 # =============================================================================================== #
 # Clusters / Significance
@@ -406,7 +452,53 @@ end
 # length score
 # for each group, resample 1000 groups of group size n and measure cdr3 length distribution.
 
+using StatsBase: mode
+
+function score_lengths(g, cdrs1, cdrs2)
+    clusters = connected_components(g)
+
+    modes = []
+    props []
+
+    # get most common length for each cluster
+    for cluster in clusters
+
+        cluster_lengths = [length(s) for s in cluster]
+        modes[i] = mode(cluster_lengths)
+        props[i] = (count(==(mode), cluster_lengths)) / length(cluster)
+
+    end
+
+    # randomly pick n sequences from the null distribution and compare to
+    cluster_sizes = [length(cluster) for cluster in clusters]
+    p_vals = []
+
+    for (index, size) in cluster_sizes
+
+        for i in 1:1000
+            random_cdrs = sample(cdrs2, size, replace=true, ordered=false)
+            cluster_lengths = [length(s) for s in random_cdrs]
+            propz = (count(==(mode[index]), cluster_lengths)) / length(cluster)
+            # to do: add some way to track wins for p-val calc
+        end
+
+        (count(==(size), cluster_lengths))
+
+    end
+
+    #random_cdrs = sample(cdrs2, length(cdrs1), replace=true, ordered=false)
+
+   # get_prop(g, 1, :label, "none")
+end
+
 # v gene score
 # hyper geomtric or parameteric when over 200 sequences in one group
 
+function score_vgene()
+end
+
 # hla score
+#
+
+function score_hla()
+end
