@@ -43,7 +43,7 @@ function load_cdr3s(csvpath,)
         startswith.(df.cdr3, "C") .&
         endswith.(df.cdr3, "F"),
     :]
-    filtered_df_2 = combine(groupby(filtered_df, :cdr3), nrow => :cdr3_count)
+    filtered_df_2 = combine(groupby(filtered_df, :cdr3), nrow => :duplicate_count)
     return filtered_df_2
 end
 
@@ -336,8 +336,6 @@ function get_motif(st__, u1)
 
 end
 
-end
-
 
 # =============================================================================================== #
 # Graphing
@@ -457,15 +455,16 @@ using StatsBase: mode
 function score_lengths(g, cdrs2)
     clusters = connected_components(g)
 
-    modes = []
-    props []
+    modes = Vector{Int}()
+    props = Vector{Float64}()
 
     # get most common length for each cluster
-    for cluster in clusters
+    for (i, cluster) in  enumerate(clusters)
 
         cluster_lengths = [length(s) for s in cluster]
-        modes[i] = mode(cluster_lengths)
-        props[i] = (count(==(mode), cluster_lengths)) / length(cluster)
+        m = mode(cluster_lengths)
+        push!(modes, m)
+        push!(props, count(==(m), cluster_lengths) / length(cluster))
 
     end
 
@@ -473,22 +472,24 @@ function score_lengths(g, cdrs2)
     cluster_sizes = [length(cluster) for cluster in clusters]
     p_vals = []
 
-    for (index, size) in cluster_sizes
+    for (index, size) in enumerate(cluster_sizes)
 
         sim_props = []
 
         for i in 1:1000
-            random_cdrs = sample(cdrs2, size, replace=true, ordered=false)
+            random_cdrs = sample(cdrs2, size; replace=true, ordered=false)
             cluster_lengths = [length(s) for s in random_cdrs]
-            sim_props[i] = (count(==(mode[index]), cluster_lengths)) / length(cluster)
+            sim_props[i] = (count(==(modes[index]), cluster_lengths)) / length(cluster)
         end
 
         # count number of times sim beats data?
-        p_vals[index] = ((count(>=(props[index]), sim_props)) + 1) / 1001
+        p_val = ((count(>=(props[index]), sim_props)) + 1) / 1001
+        push!(p_vals, p_val)
 
     end
 
     return p_vals
+    # maybe add the p-vals as a attribute in the graph itself?
 
 end
 
