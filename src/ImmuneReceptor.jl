@@ -475,26 +475,30 @@ function score_lengths(g, cdrs1, cdrs2)
 
     for (index, size) in cluster_sizes
 
+        sim_props = []
+
         for i in 1:1000
             random_cdrs = sample(cdrs2, size, replace=true, ordered=false)
             cluster_lengths = [length(s) for s in random_cdrs]
-            propz = (count(==(mode[index]), cluster_lengths)) / length(cluster)
-            # to do: add some way to track wins for p-val calc
+            sim_props[i] = (count(==(mode[index]), cluster_lengths)) / length(cluster)
         end
 
-        (count(==(size), cluster_lengths))
+        # count number of times sim beats data?
+        p_vals[index] = ((count(>=(props[index]), sim_props)) + 1) / 1001
 
     end
 
-    #random_cdrs = sample(cdrs2, length(cdrs1), replace=true, ordered=false)
+    return p_vals
 
-   # get_prop(g, 1, :label, "none")
 end
 
 # v gene score
 # hyper geomtric or parameteric when over 200 sequences in one group
 
 function score_vgene()
+
+    # first check if any cluster has > 200 members and if so, use empirical calculation
+
 end
 
 # hla score
