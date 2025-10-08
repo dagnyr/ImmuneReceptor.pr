@@ -445,6 +445,8 @@ end
 
 # =============================================================================================== #
 # Clusters / Significance
+#
+# TO DO: multiple comparisons correction?
 # =============================================================================================== #
 
 # length score
@@ -495,10 +497,10 @@ function score_lengths(g, cdrs2)
 
 end
 
+#_______________#
+
 # v gene score
 # hyper geomtric or parameteric when over 200 sequences in one group
-
-# TO DO: lowkey change entire funtion, took wrong approach
 
 using Distributions
 
@@ -545,7 +547,7 @@ function score_vgene(g)
 
             for i in 1:1000 # do 1000 random pulls from the samples and count vgenes
 
-                random_vgenes = sample(v_all, length(collect(keys(di))); replace=true, ordered=false)
+                random_vgenes = sample(v_all, length(di); replace=true, ordered=false)
 
                 # go through every vgene
                 for (vgene, orig_count) in di
@@ -563,7 +565,7 @@ function score_vgene(g)
             end
 
             # go through sim wins + gen new dictionary
-            #
+
             for (vgene, wins) in sim_wins
                 p = (wins + 1) / 1001
                 p_vals[vgene] = get!(p_vals, vgene, 0) + p
@@ -578,46 +580,19 @@ function score_vgene(g)
 
     end
 
-end
-
-# ___________ #
-
-all_vertices = collect(vertices(g)) # collect all vertices
-v_all = [get_prop(g, v, :v_gene) for v in all_vertices] # get all vgenes
-
-sim_wins = Dict{String,Int}()
-
-for i in 1:1000 # do 1000 random pulls from the samples and count vgenes
-
-    random_vgenes = sample(v_all, length(collect(keys(di))); replace=true, ordered=false)
-
-    # go through every vgene
-    for (vgene, orig_count) in di
-
-        count = count(x -> x == vgene, random_vgenes)
-
-        if count>= orig_count
-            sim_wins[vgene] = get!(sim_wins, vgene, 0) + 1
-        elseif
-            sim_wins[vgene] = get!(sim_wins, vgene, 0) + 0
-        end
-
-    end
+    return cluster_pvals
 
 end
 
-p-vals = (collect(values(sim_wins)) + 1) / 1001
-p-val = min(p-vals)
-
+#_______________#
 
 # hla score
 #
 
 function score_hla()
 
-    # use sample or donor id from original csv
-    # load separare hla typing table
-    # figure out best way to determine if a type is enriched - maybe population level HLA distirbution (aka by chance)
-    # or maybe make a random cdr cluster w/ random draws and see HLA typing (might be problematic if few donors in sample)
+    # get background hla frequency for donors
+    # check hla frequency per cluster
+    # do hypergeometric test
 
 end
