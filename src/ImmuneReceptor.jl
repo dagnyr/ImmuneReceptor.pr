@@ -576,7 +576,7 @@ function score_vgene(g)
     # pick and report min p-val and corresponding vgene for cluster
 
     key, val = findmin(p_vals)
-    cluster_pvals[index] = Dict(key => val)
+    cluster_pvals[index] = Dict(key => (val * length(p_vals))) # multiple tests correction
 
     end
 
@@ -590,6 +590,8 @@ end
 #
 
 function score_hla()
+
+
 
     # get background hla frequency for donors
     # check hla frequency per cluster
