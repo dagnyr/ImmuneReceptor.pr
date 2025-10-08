@@ -508,7 +508,7 @@ function score_vgene(g)
     # make vector w/ dictionary of vgenes
     counts = Vector{Dict{String,Int}}(undef, length(clusters))
     totals = Dict{String,Int}()
-    sizes = Vector{Int}()(undef, length(clusters))
+    sizes = Vector{Int}(undef, length(clusters))
     p_vals = Dict{String,Float64}()
 
     for (index, cluster) in enumerate(clusters)
@@ -517,7 +517,7 @@ function score_vgene(g)
         for vertex in cluster
             vgene = get_prop(g, vertex, :v_gene)
             di[vgene] = get!(di, vgene, 0) + 1
-            totals[vgene] = get!(vgene, 0) + 1
+            totals[vgene] = get!(totals, vgene, 0) + 1
         end
         counts[index] = di
     end
@@ -531,18 +531,15 @@ function score_vgene(g)
 
     for (index, di) in enumerate(counts)
 
-        di2 = Dict{String,Int}()
-        # initialize matrix that has no. vgene rows and 1000 (simdepth) cols
+        if length(di) <= 200 # for less than 200 in a cluster
 
-        if collect(values(di)) <=200 # for less than 200 in a cluster
-
-            for (vgene, count) in di
+            for (vgene, count_) in di
                 distribution = Hypergeometric(totals[vgene], sum(sizes) - totals[vgene], sizes[index])
-                p = ccdf(distribution, count - 1)
+                p = ccdf(distribution, count_ - 1)
                 p_vals[vgene] = get!(p_vals, vgene, 0) + p
             end
 
-        elseif # for when > 200 in a cluster
+        else # for when > 200 in a cluster
 
             sim_wins = Dict{String,Int}()
 
@@ -553,9 +550,9 @@ function score_vgene(g)
                 # go through every vgene
                 for (vgene, orig_count) in di
 
-                    count = count(x -> x == vgene, random_vgenes)
+                    count_ = count(x -> x == vgene, random_vgenes)
 
-                    if count>= orig_count
+                    if count_>= orig_count
                         sim_wins[vgene] = get!(sim_wins, vgene, 0) + 1
                     elseif
                         sim_wins[vgene] = get!(sim_wins, vgene, 0) + 0
@@ -568,7 +565,7 @@ function score_vgene(g)
             # go through sim wins + gen new dictionary
             #
             for (vgene, wins) in sim_wins
-                p = (collect(value(sin_wins[vgene])) + 1) / 1001
+                p = (wins + 1) / 1001
                 p_vals[vgene] = get!(p_vals, vgene, 0) + p
             end
 
@@ -577,7 +574,7 @@ function score_vgene(g)
     # pick and report min p-val and corresponding vgene for cluster
 
     key, val = findmin(p_vals)
-    cluster_pvals[index] = Dict(key --> val)
+    cluster_pvals[index] = Dict(key => val)
 
     end
 
