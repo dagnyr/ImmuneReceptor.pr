@@ -499,59 +499,112 @@ end
 # hyper geomtric or parameteric when over 200 sequences in one group
 
 # TO DO: lowkey change entire funtion, took wrong approach
+
+using Distributions
+
 function score_vgene(g)
     clusters = connected_components(g)
 
     # make vector w/ dictionary of vgenes
     counts = Vector{Dict{String,Int}}(undef, length(clusters))
+    totals = Dict{String,Int}()
+    sizes = Vector{Int}()(undef, length(clusters))
+    p_vals = Dict{String,Float64}()
+
     for (index, cluster) in enumerate(clusters)
         di = Dict{String,Int}()
+        sizes[index] = length(cluster)
         for vertex in cluster
             vgene = get_prop(g, vertex, :v_gene)
             di[vgene] = get!(di, vgene, 0) + 1
+            totals[vgene] = get!(vgene, 0) + 1
         end
         counts[index] = di
     end
 
-    props = Vector{Dict{String,Float64}}(undef, length(clusters))
+
+    # actually do p-vals after counting
+
+    all_vertices = collect(vertices(g)) # collect all vertices
+    v_all = [get_prop(g, v, :v_gene) for v in all_vertices] # get all vgenes
+
     for (index, di) in enumerate(counts)
-        total_vgenes = sum(values(di))
 
         di2 = Dict{String,Int}()
+        # initialize matrix that has no. vgene rows and 1000 (simdepth) cols
 
-        for (vgene, count) in di
+        if collect(values(di)) <=200 # for less than 200 in a cluster
 
-            prop = count / total_vgenes
-            di2[vgene] = get!(di2, vgene, 0) + prop
+            for (vgene, count) in di
+                distribution = Hypergeometric(totals[vgene], sum(sizes) - totals[vgene], sizes[index])
+                p = ccdf(distribution, count - 1)
+                p_vals[vgene] = get!(p_vals, vgene, 0) + p
+            end
 
+        elseif # for when > 200 in a cluster
+
+            sim_wins = Dict{String,Int}()
+
+            for i in 1:1000 # do 1000 random pulls from the samples and count vgenes
+
+                random_vgenes = sample(v_all, length(collect(keys(di))); replace=true, ordered=false)
+
+                # go through every vgene
+                for (vgene, orig_count) in di
+
+                    count = count(x -> x == vgene, random_vgenes)
+
+                    if count>= orig_count
+                        sim_wins[vgene] = get!(sim_wins, vgene, 0) + 1
+                    elseif
+                        sim_wins[vgene] = get!(sim_wins, vgene, 0) + 0
+                    end
+
+                end
+
+            end
+
+            # edit to be vgene specific
+            p-vals = (collect(values(sim_wins)) + 1) / 1001
+            p-val = min(p-vals)
+
+        end
+
+    # pick and report min p-val and corresponding vgene for cluster
+
+    end
+
+end
+
+# ___________ #
+
+all_vertices = collect(vertices(g)) # collect all vertices
+v_all = [get_prop(g, v, :v_gene) for v in all_vertices] # get all vgenes
+
+sim_wins = Dict{String,Int}()
+
+for i in 1:1000 # do 1000 random pulls from the samples and count vgenes
+
+    random_vgenes = sample(v_all, length(collect(keys(di))); replace=true, ordered=false)
+
+    # go through every vgene
+    for (vgene, orig_count) in di
+
+        count = count(x -> x == vgene, random_vgenes)
+
+        if count>= orig_count
+            sim_wins[vgene] = get!(sim_wins, vgene, 0) + 1
+        elseif
+            sim_wins[vgene] = get!(sim_wins, vgene, 0) + 0
         end
 
     end
 
-    # after getting dictionary of vgenes get proportion
-    # after counting the vgenes compare to the count in the null
-
-    # redo count for the null distribution
-
-
-    # make
-    # dictionary with every cluster -> list of v-genes for every cdr3
-    # for every cluster, count total occurances and determine if over 200
-    # if under 200, calculate p-val for every v-gene and report lowest value + gene
-    # if over 200, run simulation 1000 times and count, make pvals, etc. (just like length)
-
-
-    if any(c -> c > 200, [length(cluster) for cluster in clusters])
-
-    else
-
-    end
-
-
-
-    # first check if any cluster has > 200 members and if so, use empirical calculation
-
 end
+
+p-vals = (collect(values(sim_wins)) + 1) / 1001
+p-val = min(p-vals)
+
 
 # hla score
 #
