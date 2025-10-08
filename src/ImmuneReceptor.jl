@@ -527,6 +527,7 @@ function score_vgene(g)
 
     all_vertices = collect(vertices(g)) # collect all vertices
     v_all = [get_prop(g, v, :v_gene) for v in all_vertices] # get all vgenes
+    cluster_pvals = Vector{Dict{String,Float64}}(undef, length(clusters))
 
     for (index, di) in enumerate(counts)
 
@@ -564,13 +565,19 @@ function score_vgene(g)
 
             end
 
-            # edit to be vgene specific
-            p-vals = (collect(values(sim_wins)) + 1) / 1001
-            p-val = min(p-vals)
+            # go through sim wins + gen new dictionary
+            #
+            for (vgene, wins) in sim_wins
+                p = (collect(value(sin_wins[vgene])) + 1) / 1001
+                p_vals[vgene] = get!(p_vals, vgene, 0) + p
+            end
 
         end
 
     # pick and report min p-val and corresponding vgene for cluster
+
+    key, val = findmin(p_vals)
+    cluster_pvals[index] = Dict(key --> val)
 
     end
 
