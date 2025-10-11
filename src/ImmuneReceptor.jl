@@ -34,15 +34,21 @@ function is_cdr3(st)
 
 end
 
-function load_cdr3s(csvpath,)
-    df = CSV.read(csvpath),DataFrame)
+function load_cdr3s(csvpath)
+    df = CSV.read(csvpath, DataFrame)
     filtered_df = df[
-        (df.chain .∈ ["TRG","TRD","TRA","TRB"]) .&
-        .!(df.tcr_gene .∈ ["None", "none","NA", "na", " "]) .&
-        .!(df.cdr3 .∈ ["None", "none","NA", "na", " "]) .&
-        startswith.(df.cdr3, "C") .&
-        endswith.(df.cdr3, "F"),
-    :]
+        (df.chain .∈ [
+            "TRG",
+            "TRD",
+            "TRA",
+            "TRB",
+        ]) .& .!(
+            df.tcr_gene .∈ ["None", "none", "NA", "na", " "],
+        ) .& .!(
+            df.cdr3 .∈ ["None", "none", "NA", "na", " "],
+        ) .& startswith.(df.cdr3, "C") .& endswith.(df.cdr3, "F"),
+        :,
+    ]
     filtered_df_2 = combine(groupby(filtered_df, :cdr3), nrow => :duplicate_count)
     return filtered_df_2
 end
@@ -125,13 +131,13 @@ function make_distance(st_)
 
     u2 = div(u1 * (u1 - 1), 2)
 
-    in__ = Vector{Tuple{Int,Int}}(undef, u2)
+    in__ = Vector{Tuple{Int, Int}}(undef, u2)
 
     po_ = Vector{Int}(undef, u2)
 
     i1 = 0
 
-    @showprogress for i2 in 1:u1, i3 in (i2+1):u1
+    @showprogress for i2 in 1:u1, i3 in (i2 + 1):u1
 
         s1 = st_[i2]
 
@@ -143,7 +149,7 @@ function make_distance(st_)
 
         end
 
-        in__[i1+=1] = i2, i3
+        in__[i1 += 1] = i2, i3
 
         po_[i1] = make_hamming_distance(s1, s2)
 
@@ -163,7 +169,7 @@ function get_motif_counts(
     cdrs::AbstractVector{<:AbstractString},
 )
 
-    motif_counts = Dict{String,Int}()
+    motif_counts = Dict{String, Int}()
 
     for m in motif
 
@@ -178,13 +184,13 @@ end
 # makes list of motifs in cdr3s, counts them, filters based on a cutoff, then provides set count
 function get_motifs(st_::AbstractVector{<:AbstractString}, min::Int, max::Int)
 
-    mo_ = Dict{String,Int}() # make dictionary
+    mo_ = Dict{String, Int}() # make dictionary
 
     for s1 in st_
 
         lastindex(s1) < 7 && continue # only keep cdr3 7 or longer
 
-        s2 = s1[4:(end-3)] # remove first and last 3 aa
+        s2 = s1[4:(end - 3)] # remove first and last 3 aa
         for um in min:max
 
             um > lastindex(s2) && continue # make sure cdr3 is logner than the motif size
@@ -194,7 +200,7 @@ function get_motifs(st_::AbstractVector{<:AbstractString}, min::Int, max::Int)
 
             while i2 < lastindex(s2)
 
-                m = s2[(i1+=1):(i2+=1)] # get the motif
+                m = s2[(i1 += 1):(i2 += 1)] # get the motif
                 mo_[m] = get!(mo_, m, 0) + 1 # count total motif occurances
 
             end
@@ -219,11 +225,11 @@ function find_significant_motifs(motifs, cdrs1, cdrs2)
 
     counts_sim = Array{Float64}(undef, 1000, length(motifs_list))
 
-    significant_motifs = Dict{String,Float64}()
+    significant_motifs = Dict{String, Float64}()
 
     for i in 1:1000
 
-        random_cdrs = sample(cdrs2, length(cdrs1); replace=true, ordered=false)
+        random_cdrs = sample(cdrs2, length(cdrs1); replace = true, ordered = false)
         random_counts = get_motif_counts(motifs_list, random_cdrs)
         counts_sim[i, :] = collect(values(random_counts))
 
@@ -260,12 +266,12 @@ function make_motif_pairs(st_::AbstractVector{<:AbstractString}, motif)
     u1 = lastindex(st_)
     u2 = div(u1 * (u1 - 1), 2)
 
-    in__ = Vector{Tuple{Int,Int}}(undef, u2)
-    po_  = Vector{Int}(undef, u2)
+    in__ = Vector{Tuple{Int, Int}}(undef, u2)
+    po_ = Vector{Int}(undef, u2)
 
     i1 = 0
 
-    for i2 in 1:u1, i3 in (i2+1):u1
+    for i2 in 1:u1, i3 in (i2 + 1):u1
         s1, s2 = st_[i2], st_[i3]
 
         has1 = occursin(motif, s1)
@@ -297,7 +303,7 @@ end
 
 function get_motif(s1::AbstractString, um)
 
-    s2 = s1[4:(end-3)]
+    s2 = s1[4:(end - 3)]
 
     # TODO: Use Set
     st_ = String[]
@@ -308,7 +314,7 @@ function get_motif(s1::AbstractString, um)
 
     while i2 < lastindex(s2)
 
-        push!(st_, s2[(i1+=1):(i2+=1)])
+        push!(st_, s2[(i1 += 1):(i2 += 1)])
 
     end
 
@@ -318,7 +324,7 @@ end
 
 function get_motif(st__, u1)
 
-    di = Dict{String,Int}()
+    di = Dict{String, Int}()
 
     for nd in eachindex(st__), st in st__[nd]
 
@@ -481,7 +487,7 @@ function score_lengths(g, cdrs2)
         sim_props = Float64[]
 
         for i in 1:1000
-            random_cdrs = sample(cdrs2, size; replace=true, ordered=false)
+            random_cdrs = sample(cdrs2, size; replace = true, ordered = false)
             cluster_lengths = [length(s) for s in random_cdrs]
             push!(sim_props, (count(==(modes[index]), cluster_lengths)) / size)
         end
@@ -508,13 +514,13 @@ function score_vgene(g)
     clusters = connected_components(g)
 
     # make vector w/ dictionary of vgenes
-    counts = Vector{Dict{String,Int}}(undef, length(clusters))
-    totals = Dict{String,Int}()
+    counts = Vector{Dict{String, Int}}(undef, length(clusters))
+    totals = Dict{String, Int}()
     sizes = Vector{Int}(undef, length(clusters))
-    p_vals = Dict{String,Float64}()
+    p_vals = Dict{String, Float64}()
 
     for (index, cluster) in enumerate(clusters)
-        di = Dict{String,Int}()
+        di = Dict{String, Int}()
         sizes[index] = length(cluster)
         for vertex in cluster
             vgene = get_prop(g, vertex, :v_gene)
@@ -529,34 +535,35 @@ function score_vgene(g)
 
     all_vertices = collect(vertices(g)) # collect all vertices
     v_all = [get_prop(g, v, :v_gene) for v in all_vertices] # get all vgenes
-    cluster_pvals = Vector{Dict{String,Float64}}(undef, length(clusters))
+    cluster_pvals = Vector{Dict{String, Float64}}(undef, length(clusters))
 
     for (index, di) in enumerate(counts)
 
         if length(di) <= 200 # for less than 200 in a cluster
 
             for (vgene, count_) in di
-                distribution = Hypergeometric(totals[vgene], sum(sizes) - totals[vgene], sizes[index])
+                distribution =
+                    Hypergeometric(totals[vgene], sum(sizes) - totals[vgene], sizes[index])
                 p = ccdf(distribution, count_ - 1)
                 p_vals[vgene] = get!(p_vals, vgene, 0) + p
             end
 
         else # for when > 200 in a cluster
 
-            sim_wins = Dict{String,Int}()
+            sim_wins = Dict{String, Int}()
 
             for i in 1:1000 # do 1000 random pulls from the samples and count vgenes
 
-                random_vgenes = sample(v_all, length(di); replace=true, ordered=false)
+                random_vgenes = sample(v_all, length(di); replace = true, ordered = false)
 
                 # go through every vgene
                 for (vgene, orig_count) in di
 
                     count_ = count(x -> x == vgene, random_vgenes)
 
-                    if count_>= orig_count
+                    if count_ >= orig_count
                         sim_wins[vgene] = get!(sim_wins, vgene, 0) + 1
-                    elseif
+                    else
                         sim_wins[vgene] = get!(sim_wins, vgene, 0) + 0
                     end
 
@@ -573,10 +580,10 @@ function score_vgene(g)
 
         end
 
-    # pick and report min p-val and corresponding vgene for cluster
+        # pick and report min p-val and corresponding vgene for cluster
 
-    key, val = findmin(p_vals)
-    cluster_pvals[index] = Dict(key => (val * length(p_vals))) # multiple tests correction
+        key, val = findmin(p_vals)
+        cluster_pvals[index] = Dict(key => (val * length(p_vals))) # multiple tests correction
 
     end
 
@@ -596,5 +603,7 @@ function score_hla()
     # get background hla frequency for donors
     # check hla frequency per cluster
     # do hypergeometric test
+
+end
 
 end
