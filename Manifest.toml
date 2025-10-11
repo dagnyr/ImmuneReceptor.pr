@@ -2,7 +2,7 @@
 
 julia_version = "1.12.0"
 manifest_format = "2.0"
-project_hash = "d78d833cece78b5b15663ce9fa4be091d83e96f9"
+project_hash = "bd6fdceb36123e0943f6eb2db04387fbd4edab32"
 
 [[deps.AliasTables]]
 deps = ["PtrArrays", "Random"]
@@ -252,7 +252,7 @@ uuid = "34004b35-14d8-5ef3-9330-4cdb6864b03a"
 version = "0.3.28"
 
 [[deps.ImmuneReceptor]]
-deps = ["Graphs", "MetaGraphsNext", "Nucleus", "ProgressMeter", "Random"]
+deps = ["Distributions", "Graphs", "MetaGraphsNext", "Nucleus", "ProgressMeter", "Random", "StatsBase"]
 path = "."
 uuid = "596bd1cf-497f-4349-8f50-b25beac56f74"
 version = "0.1.0"
