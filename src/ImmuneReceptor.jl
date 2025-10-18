@@ -470,7 +470,7 @@ function score_lengths(g, cdrs2)
 
     # get most common length for each cluster
     for cluster in clusters
-      labels = (get_prop(g, v, :label) for v in cluster) # fixed this to get labels
+        labels = (get_prop(g, v, :label) for v in cluster) # fixed this to get labels
         cluster_lengths = [length(s) for s in labels]
         m = mode(cluster_lengths)
         push!(modes, m)
