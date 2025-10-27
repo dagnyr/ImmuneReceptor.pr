@@ -46,3 +46,23 @@ add_edge!(g, :Uwu, :Owo, Dict(:type => "global", :distance => 2)) # replaces pri
 
 # solution? add a vector of dicionaries to edges and have a global distance, global p-val, motif and motif p-val entry.
 # to determine if theres a global or local edge use bool to check for each edge?
+
+
+# attempt 3
+
+g = MetaGraph(
+    Graph();
+    label_type=Symbol,
+    vertex_data_type=Dict{Symbol,Any},  # test storing multiple labels?
+    edge_data_type=Dict{Symbol,Any},
+)
+
+add_vertex!(g, :Owo, Dict(:label => "ACGATAG", :vgene => "V13B", :jgene => "J7")) # cdr3 and gene is fake for testing
+add_vertex!(g, :Uwu, Dict(:label => "CCGGTAT", :vgene => "V12A", :jgene => "J5"))
+
+add_edge!(g, :Uwu, :Owo, Dict(:distance => 2, :dpval => 0.02, :motif => "TA", :mpval => "0.03"))
+
+g[:Uwu, :Owo][:distance]
+g[:Uwu, :Owo][:dpval]
+
+g[:Uwu, :Owo][:new] = "testing" # omg it works!
