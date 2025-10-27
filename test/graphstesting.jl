@@ -66,3 +66,114 @@ g[:Uwu, :Owo][:distance]
 g[:Uwu, :Owo][:dpval]
 
 g[:Uwu, :Owo][:new] = "testing" # omg it works!
+
+
+# _______________________________________ #
+
+
+function make_vertices!(g, cdrs)
+    isblank(x) = x === nothing || x === missing || x in ("None", "none", "NA", "na", "Na", " ", "  ", "")
+
+    for row in nrow(df)
+
+        add_vertex!(g, Symbol(row), Dict(:cdr => cdrs.cdr3[row])) # add vertex
+
+        # check for vgenes, etc. and store if they exist
+        if !isblank(cdrs.v_gene[row])
+            g[Symbol(row)][:vgene] = cdrs.v_gene[row]
+        end
+
+        if !isblank(cdrs.j_gene[row])
+            g[Symbol(row)][:jgene] = cdrs.j_gene[row]
+        end
+
+        if !isblank(cdrs.d_gene[row])
+            g[Symbol(row)][:dgene] = cdrs.d_gene[row]
+        end
+
+    end
+
+    return g # return graph
+
+end
+
+# make a global edge w/ annotation of hamming disrance
+function add_global_edge!(g, u, v, distance::Int64)
+    add_edge!(g, u, v, Dict(:distance => 2))
+end
+
+# add a local edge w/ annotation of motif and the pval (from get_significant_motifs)
+function add_local_edge!(g, u, v, motif::String, pval::Int64)
+    add_edge!(g, u, v, Dict(:motif => motif, :mpval => pval))
+end
+
+# go through cdrs
+function make_edges(cdrs, motifs)
+    g = MetaGraph(Graph(length(cdrs)))
+    g = add_vertices(g, cdrs)
+
+    # start w/ global distances
+    pairs, dists = make_distance(cdrs.cdr3)
+    for (index, (cdr1, cdr2)) in enumerate(pairs)
+        d = dists[index]
+        if dists[index] <= 1
+            add_global_edge!(g, cdr1, cdr2, dists[index])
+        end
+    end
+
+    # TODO: next do local edges
+    for (m, pval) in motifs
+        pairs2, hasmotif = make_motif_pairs(cdrs.cdr3, m)
+
+        for (index, (cdr1, cdr2)) in enumerate(pairs2)
+            if hasmotif[index] == 1
+                add_local_edge!(g, cdr1, cdr2, m, pval)
+            end
+
+        end
+
+    end
+
+    return g
+
+end
+
+# only make global edges
+function make_global_edges(cdrs, motifs)
+    g = MetaGraph(Graph(length(cdrs)))
+    g = add_vertices(g, cdrs)
+
+    # start w/ global distances
+    pairs, dists = make_distance(cdrs.cdr3)
+    for (index, (cdr1, cdr2)) in enumerate(pairs)
+        d = dists[index]
+        if dists[index] <= 1
+            add_global_edge!(g, cdr1, cdr2, dists[index])
+        end
+    end
+
+    return g
+
+end
+
+# only make local edges
+function make_local_edges(cdrs, motifs)
+    g = MetaGraph(Graph(length(cdrs)))
+    g = add_vertices(g, cdrs)
+
+    # local edge making
+    for (m, pval) in motifs
+        pairs2, hasmotif = make_motif_pairs(cdrs.cdr3, m)
+
+        for (index, (cdr1, cdr2)) in enumerate(pairs2)
+            if hasmotif[index] == 1
+                add_local_edge!(g, cdr1, cdr2, m, pval)
+            end
+
+        end
+
+    end
+
+    return g
+
+end
