@@ -400,12 +400,17 @@ function make_edges(cdrs, motifs, isglobal, islocal)
         pairs, dists = make_distance(cdrs.cdr3)
         for (index, (cdr1, cdr2)) in enumerate(pairs)
             d = dists[index]
-            if dists[index] <= 1
+            if d <= 1
 
-                # TO DO check if theres already an edge and if not make edge
-                # then check if theres already a global and if not add global edge
+                if haskey(g, cdr1, cdr2) = true
 
-                add_global_edge!(g, cdr1, cdr2, dists[index])
+                    g[cdr1, cdr2][:distance] = d
+
+                else
+
+                    add_global_edge!(g, cdr1, cdr2, d)
+
+                end
 
             end
         end
@@ -419,56 +424,22 @@ function make_edges(cdrs, motifs, isglobal, islocal)
             for (index, (cdr1, cdr2)) in enumerate(pairs2)
                 if hasmotif[index] == 1
 
-                    # TO DOcheck if theres already an edge and if not make edge
-                    # then check if theres already a local and if not add local edge
+                    if haskey(g, cdr1, cdr2) = true
 
-                    add_local_edge!(g, cdr1, cdr2, m, pval)
+                        g[cdr1, cdr2][:motif] = m
+                        g[cdr1, cdr2][:mpval] = pval
+
+                    else
+
+                        add_local_edge!(g, cdr1, cdr2, m, pval)
+
+                    end
 
                 end
 
             end
 
         end
-    end
-
-    return g
-
-end
-
-# only make global edges
-function make_global_edges(cdrs, motifs)
-    g = MetaGraph(Graph(length(cdrs)))
-    g = add_vertices(g, cdrs)
-
-    # start w/ global distances
-    pairs, dists = make_distance(cdrs.cdr3)
-    for (index, (cdr1, cdr2)) in enumerate(pairs)
-        d = dists[index]
-        if dists[index] <= 1
-            add_global_edge!(g, cdr1, cdr2, dists[index])
-        end
-    end
-
-    return g
-
-end
-
-# only make local edges
-function make_local_edges(cdrs, motifs)
-    g = MetaGraph(Graph(length(cdrs)))
-    g = add_vertices(g, cdrs)
-
-    # local edge making
-    for (m, pval) in motifs
-        pairs2, hasmotif = make_motif_pairs(cdrs.cdr3, m)
-
-        for (index, (cdr1, cdr2)) in enumerate(pairs2)
-            if hasmotif[index] == 1
-                add_local_edge!(g, cdr1, cdr2, m, pval)
-            end
-
-        end
-
     end
 
     return g
