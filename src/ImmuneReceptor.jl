@@ -352,7 +352,7 @@ function make_vertices!(g, cdrs)
 
     for row in nrow(df)
 
-        add_vertex!(g, Symbol(row), Dict(:cdr => cdrs.cdr3[row])) # add vertex
+        add_vertex!(g, Symbol(cdrs.cdr3[row]), Dict(:index => row)) # add vertex
 
         # check for vgenes, etc. and store if they exist
         if !isblank(cdrs.v_gene[row])
@@ -375,7 +375,7 @@ end
 
 # make a global edge w/ annotation of hamming disrance
 function add_global_edge!(g, u, v, distance::Int64)
-    add_edge!(g, u, v, Dict(:distance => 2))
+    add_edge!(g, u, v, Dict(:distance => distance))
 end
 
 # add a local edge w/ annotation of motif and the pval (from get_significant_motifs)
@@ -384,30 +384,51 @@ function add_local_edge!(g, u, v, motif::String, pval::Int64)
 end
 
 # go through cdrs
-function make_edges(cdrs, motifs)
-    g = MetaGraph(Graph(length(cdrs)))
-    g = add_vertices(g, cdrs)
+function make_edges(cdrs, motifs, isglobal, islocal)
+    g = MetaGraph(
+        Graph();
+        label_type=String,
+        vertex_data_type=Dict{Symbol,Any},  # test storing multiple labels?
+        edge_data_type=Dict{Symbol,Any},
+    )
+
+    g = make_vertices!(g, cdrs)
 
     # start w/ global distances
-    pairs, dists = make_distance(cdrs.cdr3)
-    for (index, (cdr1, cdr2)) in enumerate(pairs)
-        d = dists[index]
-        if dists[index] <= 1
-            add_global_edge!(g, cdr1, cdr2, dists[index])
+    # # changed so label is cdr3
+    if isglobal = true
+        pairs, dists = make_distance(cdrs.cdr3)
+        for (index, (cdr1, cdr2)) in enumerate(pairs)
+            d = dists[index]
+            if dists[index] <= 1
+
+                # TO DO check if theres already an edge and if not make edge
+                # then check if theres already a global and if not add global edge
+
+                add_global_edge!(g, cdr1, cdr2, dists[index])
+
+            end
         end
     end
 
     # TODO: next do local edges
-    for (m, pval) in motifs
-        pairs2, hasmotif = make_motif_pairs(cdrs.cdr3, m)
+    if islocal = true
+        for (m, pval) in motifs
+            pairs2, hasmotif = make_motif_pairs(cdrs.cdr3, m)
 
-        for (index, (cdr1, cdr2)) in enumerate(pairs2)
-            if hasmotif[index] == 1
-                add_local_edge!(g, cdr1, cdr2, m, pval)
+            for (index, (cdr1, cdr2)) in enumerate(pairs2)
+                if hasmotif[index] == 1
+
+                    # TO DOcheck if theres already an edge and if not make edge
+                    # then check if theres already a local and if not add local edge
+
+                    add_local_edge!(g, cdr1, cdr2, m, pval)
+
+                end
+
             end
 
         end
-
     end
 
     return g
