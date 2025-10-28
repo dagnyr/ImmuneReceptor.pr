@@ -461,17 +461,16 @@ end
 
 using StatsBase: mode
 
-function score_lengths(g, cdrs2)
+function find_length_pvals(g, cdrs2)
     clusters = connected_components(g)
-
-    # TO DO GET PROPERTY LAB FROM EACH VERTEX get_prop(g, vertex_id, :label)
 
     modes = Vector{Int}()
     props = Vector{Float64}()
 
     # get most common length for each cluster
     for cluster in clusters
-        labels = (get_prop(g, v, :label) for v in cluster) # fixed this to get labels
+
+        labels = label_for.(Ref(g), cluster) # should be fixed now!
         cluster_lengths = [length(s) for s in labels]
         m = mode(cluster_lengths)
         push!(modes, m)
@@ -500,7 +499,26 @@ function score_lengths(g, cdrs2)
     end
 
     return p_vals
-    # maybe add the p-vals as a attribute in the graph itself?
+
+end
+
+function score_lengths(g, cdrs2)
+
+    clusters = connected_components(g)
+
+    p_vals = find_length_pvals(g, cdrs2)
+
+    for (index, cluster) in enumerate(clusters)
+
+        labels = label_for.(Ref(g), cluster)
+
+        for label in labels
+            g[label][:length_pval] = p_vals[index] # adding cluster pval to each vertex
+        end
+
+    end
+
+    return p_vals
 
 end
 
@@ -518,13 +536,12 @@ function score_vgene(g)
     counts = Vector{Dict{String,Int}}(undef, length(clusters))
     totals = Dict{String,Int}()
     sizes = Vector{Int}(undef, length(clusters))
-    p_vals = Dict{String,Float64}()
 
     for (index, cluster) in enumerate(clusters)
         di = Dict{String,Int}()
         sizes[index] = length(cluster)
         for vertex in cluster
-            vgene = get_prop(g, vertex, :v_gene)
+            vgene = g[label_for(g, vertex)][:vgene] # should be fixed now!
             di[vgene] = get!(di, vgene, 0) + 1
             totals[vgene] = get!(totals, vgene, 0) + 1
         end
@@ -533,18 +550,17 @@ function score_vgene(g)
 
 
     # actually do p-vals after counting
-
-    all_vertices = collect(vertices(g)) # collect all vertices
-    v_all = [get_prop(g, v, :v_gene) for v in all_vertices] # get all vgenes
+    v_all = [g[cdr][:vgene] for cdr in labels(g) if haskey(g[cdr], :vgene)]
     cluster_pvals = Vector{Dict{String,Float64}}(undef, length(clusters))
 
     for (index, di) in enumerate(counts)
 
+        p_vals = Dict{String,Float64}()
+
         if length(di) <= 200 # for less than 200 in a cluster
 
             for (vgene, count_) in di
-                distribution =
-                    Hypergeometric(totals[vgene], sum(sizes) - totals[vgene], sizes[index])
+                distribution = Hypergeometric(totals[vgene], sum(sizes) - totals[vgene], sizes[index])
                 p = ccdf(distribution, count_ - 1)
                 p_vals[vgene] = get!(p_vals, vgene, 0) + p
             end
@@ -555,7 +571,8 @@ function score_vgene(g)
 
             for i in 1:1000 # do 1000 random pulls from the samples and count vgenes
 
-                random_vgenes = sample(v_all, length(di); replace=true, ordered=false)
+                # sizes[index] has cluster size - stored in earlier loop
+                random_vgenes = sample(v_all, sizes[index]; replace=true, ordered=false)
 
                 # go through every vgene
                 for (vgene, orig_count) in di
@@ -588,9 +605,28 @@ function score_vgene(g)
 
     end
 
+    # add cluster vgene pvals to graph
+    for (index, cluster) in enumerate(clusters)
+
+        labels = label_for.(Ref(g), cluster)
+
+        for label in labels
+            g[label][:vgene_pval] = cluster_pvals[index] # adding cluster pval to each vertex
+        end
+
+    end
+
     return cluster_pvals
 
 end
+
+#_______________#
+
+
+
+#_______________#
+
+
 
 #_______________#
 
@@ -599,7 +635,12 @@ end
 
 function score_hla()
 
+    # load HLA donor stuff
 
+    # load clusters
+
+    # go through each cluster and count HLA frequency
+    # do hypergeometric test for every HLA type
 
     # get background hla frequency for donors
     # check hla frequency per cluster
