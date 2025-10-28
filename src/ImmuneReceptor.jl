@@ -634,6 +634,8 @@ end
 
 function score_hla()
 
+
+
     # load HLA donor stuff
 
     # load clusters
@@ -644,7 +646,5 @@ function score_hla()
     # get background hla frequency for donors
     # check hla frequency per cluster
     # do hypergeometric test
-
-end
 
 end
