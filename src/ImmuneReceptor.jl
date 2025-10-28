@@ -548,7 +548,6 @@ function score_vgene(g)
         counts[index] = di
     end
 
-
     # actually do p-vals after counting
     v_all = [g[cdr][:vgene] for cdr in labels(g) if haskey(g[cdr], :vgene)]
     cluster_pvals = Vector{Dict{String,Float64}}(undef, length(clusters))
@@ -557,12 +556,12 @@ function score_vgene(g)
 
         p_vals = Dict{String,Float64}()
 
-        if length(di) <= 200 # for less than 200 in a cluster
+        if sizes[index] <= 200 # for less than 200 in a cluster
 
             for (vgene, count_) in di
-                distribution = Hypergeometric(totals[vgene], sum(sizes) - totals[vgene], sizes[index])
+                distribution = Hypergeometric(totals[vgene], sum(sizes[index]) - totals[vgene], sizes[index])
                 p = ccdf(distribution, count_ - 1)
-                p_vals[vgene] = get!(p_vals, vgene, 0) + p
+                p_vals[vgene] = p
             end
 
         else # for when > 200 in a cluster
@@ -600,7 +599,7 @@ function score_vgene(g)
 
         # pick and report min p-val and corresponding vgene for cluster
 
-        key, val = findmin(p_vals)
+        val, key = findmin(p_vals)
         cluster_pvals[index] = Dict(key => (val * length(p_vals))) # multiple tests correction
 
     end
