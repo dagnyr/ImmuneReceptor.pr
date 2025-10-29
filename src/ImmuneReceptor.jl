@@ -12,6 +12,8 @@ using ProgressMeter: @showprogress
 
 using Nucleus
 
+# TO DO: add progress meters to longer running functions and scoring functions
+
 # =============================================================================================== #
 # Reading
 # =============================================================================================== #
@@ -186,14 +188,14 @@ function get_motifs(st_::AbstractVector{<:AbstractString}, min::Int, max::Int)
 
     mo_ = Dict{String,Int}() # make dictionary
 
-    for s1 in st_
+    @showprogress desc = "Finding and counting motifs..." for s1 in st_
 
         lastindex(s1) < 7 && continue # only keep cdr3 7 or longer
 
         s2 = s1[4:(end-3)] # remove first and last 3 aa
         for um in min:max
 
-            um > lastindex(s2) && continue # make sure cdr3 is logner than the motif size
+            um > lastindex(s2) && continue # make sure cdr3 is longer than the motif size
 
             i1 = 0
             i2 = i1 + um - 1
@@ -227,7 +229,7 @@ function find_significant_motifs(motifs, cdrs1, cdrs2)
 
     significant_motifs = Dict{String,Float64}()
 
-    for i in 1:1000
+    @showprogress desc = "Generating randomly sampled groups..." for i in 1:1000
 
         random_cdrs = sample(cdrs2, length(cdrs1); replace=true, ordered=false)
         random_counts = get_motif_counts(motifs_list, random_cdrs)
@@ -235,7 +237,7 @@ function find_significant_motifs(motifs, cdrs1, cdrs2)
 
     end
 
-    for (index, m) in enumerate(motifs_list)
+    @showprogress desc = "Calculating significant motifs..." for (index, m) in enumerate(motifs_list)
         ove = counts_orig[index] / mean(counts_sim[:, index])
 
         if counts_orig[index] < 2
@@ -271,7 +273,7 @@ function make_motif_pairs(st_::AbstractVector{<:AbstractString}, motif)
 
     i1 = 0
 
-    for i2 in 1:u1, i3 in (i2+1):u1
+    @showprogress desc = "Identifying sequences with shared motifs..." for i2 in 1:u1, i3 in (i2+1):u1
         s1, s2 = st_[i2], st_[i3]
 
         has1 = occursin(motif, s1)
@@ -623,13 +625,6 @@ end
 
 #_______________#
 
-
-
-#_______________#
-
-
-
-#_______________#
 
 # hla score
 #

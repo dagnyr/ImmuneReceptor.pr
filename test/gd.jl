@@ -19,13 +19,13 @@ using StatsBase
 
 # load datasets (load just one for now to test)
 df = CSV.read(
-    "/Users/dr/Downloads/GSM6470059_PNT3_filtered_contig_annotations.csv.csv",
+    "/Users/dr/Downloads/GSM6470059_PNT3_filtered_contig_annotations_copy.csv",
     DataFrame,
 )
 
 # remove any rows that don't have TRG or TRD value in "chain" column or without a value in the CDR3 column
 
-filtered_df = df[((df.chain .== "TRG") .| (df.chain .== "TRD")) .& (df.cdr3 .!= "None"), :]
+filtered_df = df[((df.chain.=="TRG").|(df.chain.=="TRD")).&(df.cdr3.!="None"), :]
 
 # count incidence of every unique value in TRJ, TRV or TRD column.
 
@@ -51,50 +51,50 @@ dgenes_D = proportionmap(df_D.d_gene)
 p1 = bar(
     collect(keys(vgenes_G)),
     collect(values(vgenes_G));
-    legend = false,
-    xlabel = "V Gene",
-    ylabel = "Frequency",
-    title = "γ-Chain V Gene Frequency",
+    legend=false,
+    xlabel="V Gene",
+    ylabel="Frequency",
+    title="γ-Chain V Gene Frequency",
 )
 
 p2 = bar(
     collect(keys(jgenes_G)),
     collect(values(jgenes_G));
-    legend = false,
-    xlabel = "J Gene",
-    ylabel = "Frequency",
-    title = "γ-Chain J Gene Frequency",
+    legend=false,
+    xlabel="J Gene",
+    ylabel="Frequency",
+    title="γ-Chain J Gene Frequency",
 )
 
 # δ-chain plots
 p3 = bar(
     collect(keys(vgenes_D)),
     collect(values(vgenes_D));
-    legend = false,
-    xlabel = "V Gene",
-    ylabel = "Frequency",
-    title = "δ-Chain V Gene Frequency",
+    legend=false,
+    xlabel="V Gene",
+    ylabel="Frequency",
+    title="δ-Chain V Gene Frequency",
 )
 
 p4 = bar(
     collect(keys(dgenes_D)),
     collect(values(dgenes_D));
-    legend = false,
-    xlabel = "D Gene",
-    ylabel = "Frequency",
-    title = "δ-Chain D Gene Frequency",
+    legend=false,
+    xlabel="D Gene",
+    ylabel="Frequency",
+    title="δ-Chain D Gene Frequency",
 )
 
 p5 = bar(
     collect(keys(jgenes_D)),
     collect(values(jgenes_D));
-    legend = false,
-    xlabel = "J Gene",
-    ylabel = "Frequency",
-    title = "δ-Chain J Gene Frequency",
+    legend=false,
+    xlabel="J Gene",
+    ylabel="Frequency",
+    title="δ-Chain J Gene Frequency",
 )
 
-plot(p1, p2, p3, p4, p5; layout = (2, 3))
+plot(p1, p2, p3, p4, p5; layout=(2, 3))
 
 # count incidence of every unique length for unique CDR3s
 
@@ -104,19 +104,19 @@ lengths_G = countmap(length.(df_G.cdr3))
 p1_b = bar(
     collect(keys(lengths_D)),
     collect(values(lengths_D));
-    legend = false,
-    xlabel = "CDR3 Length (in AA)",
-    ylabel = "Frequency",
-    title = "δ-Chain CDR3 Lengths",
+    legend=false,
+    xlabel="CDR3 Length (in AA)",
+    ylabel="Frequency",
+    title="δ-Chain CDR3 Lengths",
 )
 
 p2_b = bar(
     collect(keys(lengths_G)),
     collect(values(lengths_G));
-    legend = false,
-    xlabel = "CDR3 Length (in AA)",
-    ylabel = "Frequncy",
-    title = "γ-Chain CDR3 Lengths",
+    legend=false,
+    xlabel="CDR3 Length (in AA)",
+    ylabel="Frequncy",
+    title="γ-Chain CDR3 Lengths",
 )
 
 plot(p1_b, p2_b)
@@ -124,7 +124,7 @@ plot(p1_b, p2_b)
 # make sequence logo for CDR3s (maybe center sequences)
 # TO DO: figure out how to make sequene logo with centered sequences
 
-function center_cdr3s(s::AbstractString, maximum_length::Int; padchar::Char = '-')
+function center_cdr3s(s::AbstractString, maximum_length::Int; padchar::Char='-')
     len = length(s)
     padding_left = div(maximum_length - len, 2)
     padding_right = maximum_length - len - padding_left
@@ -133,7 +133,7 @@ function center_cdr3s(s::AbstractString, maximum_length::Int; padchar::Char = '-
            repeat(string(padchar), padding_right)
 end
 
-function center_cdr3s(strings::Vector{<:AbstractString}; padchar::Char = '-')
+function center_cdr3s(strings::Vector{<:AbstractString}; padchar::Char='-')
     valid_cdrs = filter(x -> x != "none", strings)
     if isempty(valid_cdrs)
         print("No valid CDRs")
@@ -144,7 +144,7 @@ function center_cdr3s(strings::Vector{<:AbstractString}; padchar::Char = '-')
 
     vals = Vector{String}(undef, length(valid_cdrs))
     for (i, cdr3) in enumerate(valid_cdrs)
-        vals[i] = center_cdr3s(cdr3, maximum_length; padchar = padchar)
+        vals[i] = center_cdr3s(cdr3, maximum_length; padchar=padchar)
     end
     return vals
 end
