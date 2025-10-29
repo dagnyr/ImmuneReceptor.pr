@@ -558,8 +558,10 @@ function score_vgene(g)
 
         if sizes[index] <= 200 # for less than 200 in a cluster
 
+            # TO DO = verify if below is correct
+
             for (vgene, count_) in di
-                distribution = Hypergeometric(totals[vgene], sum(sizes[index]) - totals[vgene], sizes[index])
+                distribution = Hypergeometric(totals[vgene], sum(collect(values(sizes))) - totals[vgene], sizes[index])
                 p = ccdf(distribution, count_ - 1)
                 p_vals[vgene] = p
             end
@@ -632,9 +634,59 @@ end
 # hla score
 #
 
-function score_hla()
+function score_hla(g, df)
 
+    clusters = connected_components(g)
+    counts = Vector{Dict{String,Int}}(undef, length(clusters))
+    totals = Dict{String,Int}() # store total counts
+    sizes = Vector{Int}(undef, length(clusters))
 
+    for (index, cluster) in enumerate(clusters)
+
+        di = Dict{String,Int}()
+        sizes[index] = length(cluster)
+
+        for vertex in cluster
+
+            sample = g[label_for(g, vertex)][:sample] # should be fixed now!
+
+            row_w_sample = filter(row -> row.sample == sample, df)
+
+            vector = x
+
+            for hla in vector
+                di[hla] = get!(di, hla, 0) + 1
+                totals[hla] = get!(totals, hla, 0) + 1
+            end
+
+        end
+
+        counts[index] = di
+
+    end
+
+    # ___ end of counting __ #
+    #
+
+    # go through counts and compare to totals
+
+    for (index, di) in enumerate(counts)
+
+        p_vals = Dict{String,Float64}()
+
+        for (hla, count_) in di
+
+            # check that i am doing this correctly too:
+            # need # samples w/ HLA type overall, # samples w/o HLA type total, number of samples??
+            distribution = Hypergeometric(totals[hla], sum(collect(values(sizes))) - totals[hla], sizes[index])
+            p = ccdf(distribution, count_ - 1)
+            p_vals[hla] = p
+
+        end
+
+        # after gathering all p-vals, calculate no. of significant hla types per cluster potentially?
+
+    end
 
     # load HLA donor stuff
 
