@@ -309,8 +309,6 @@ function find_significant_motifs(motifs, cdrs1, cdrs2, nsim, ove_cutoff)
 
         if ove_cutoff == true
             ove = counts_orig[index] / mean(counts_sim[:, index])
-            print("slay")
-            print(counts_orig[index])
 
             if counts_orig[index] < 2
                 continue
@@ -483,13 +481,13 @@ function make_edges(cdrs, motifs, isglobal, islocal)
 
     # start w/ global distances
     # # changed so label is cdr3
-    if isglobal = true
+    if isglobal == true
         pairs, dists = make_distance(cdrs.cdr3)
         for (index, (cdr1, cdr2)) in enumerate(pairs)
             d = dists[index]
             if d <= 1
 
-                if haskey(g, cdr1, cdr2) = true
+                if haskey(g, cdr1, cdr2) == true
 
                     g[cdr1, cdr2][:distance] = d
 
@@ -504,14 +502,14 @@ function make_edges(cdrs, motifs, isglobal, islocal)
     end
 
     # TODO: next do local edges
-    if islocal = true
+    if islocal == true
         for (m, pval) in motifs
             pairs2, hasmotif = make_motif_pairs(cdrs.cdr3, m)
 
             for (index, (cdr1, cdr2)) in enumerate(pairs2)
                 if hasmotif[index] == 1
 
-                    if haskey(g, cdr1, cdr2) = true
+                    if haskey(g, cdr1, cdr2) == true
 
                         g[cdr1, cdr2][:motif] = m
                         g[cdr1, cdr2][:mpval] = pval
