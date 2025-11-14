@@ -435,7 +435,7 @@ end
 function make_vertices!(g, cdrs)
     isblank(x) = x === nothing || x === missing || x in ("None", "none", "NA", "na", "Na", " ", "  ", "")
 
-    for row in nrow(cdrs)
+    for row in 1:nrow(cdrs)
 
         label = String(cdrs.cdr3[row])
         add_vertex!(g, label, Dict(:index => row)) # add vertex
@@ -471,6 +471,9 @@ end
 
 # go through cdrs
 function make_edges(cdrs, motifs, isglobal, islocal)
+
+    cdr3_vec = String.(cdrs.cdr3)
+
     g = MetaGraph(
         Graph();
         label_type=String,
@@ -483,50 +486,52 @@ function make_edges(cdrs, motifs, isglobal, islocal)
     # start w/ global distances
     # # changed so label is cdr3
     if isglobal == true
-        pairs, dists = make_distance(cdrs.cdr3)
-        @showprogress desc = "Making global edges..." for (index, (cdr1, cdr2)) in enumerate(pairs)
-            d = dists[index]
-            if d <= 1
+        pairs, dists = make_distance(cdr3_vec)
 
-                if haskey(g, cdr1, cdr2) == true
+            @showprogress desc = "Making global edges..." for (index, (i, j)) in enumerate(pairs)
+                d = dists[index]
+                if d <= 1
+                    # i, j are indices into cdr3_vec
+                    u = cdr3_vec[i]
+                    v = cdr3_vec[j]
 
-                    g[cdr1, cdr2][:distance] = d
-
-                else
-
-                    add_global_edge!(g, cdr1, cdr2, d)
-
+                    if haskey(g, u, v)
+                        g[u, v][:distance] = d
+                    else
+                        add_global_edge!(g, u, v, d)
+                    end
                 end
-
             end
-        end
     end
 
     # TODO: next do local edges
     if islocal == true
-        @showprogress desc = "local edges..." for (m, pval) in motifs
-            pairs2, hasmotif = make_motif_pairs(cdrs.cdr3, m)
 
-            for (index, (cdr1, cdr2)) in enumerate(pairs2)
-                if hasmotif[index] == 1
+       @showprogress desc = "Making local edges..." for (motif, pval) in motifs
 
-                    if haskey(g, cdr1, cdr2) == true
+            mask  = occursin.(Ref(motif), cdr3_vec)
+            matches  = findall(mask)
+            nmatches = length(matches)
 
-                        g[cdr1, cdr2][:motif] = m
-                        g[cdr1, cdr2][:mpval] = pval
-
-                    else
-
-                        add_local_edge!(g, cdr1, cdr2, m, pval)
-
-                    end
-
-                end
-
+            # nothing to do if fewer than 2 sequences have this motif
+            if nmatches <= 1
+                continue
             end
 
+            # all unique pairs of those indices
+            for i in 1:(nmatches-1), j in (i+1):nmatches
+                u = cdr3_vec[matches[i]]
+                v = cdr3_vec[matches[j]]
+
+                if haskey(g, u, v)
+                    g[u, v][:motif] = motif
+                    g[u, v][:mpval] = pval
+                else
+                    add_local_edge!(g, u, v, motif, pval)
+                end
+            end
         end
-    end
+    end # end of local edges
 
     return g
 
