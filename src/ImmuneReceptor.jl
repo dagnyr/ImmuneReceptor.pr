@@ -356,7 +356,7 @@ function make_motif_pairs(st_::AbstractVector{<:AbstractString}, motif)
 
     i1 = 0
 
-    @showprogress desc = "Identifying sequences with shared motifs..." for i2 in 1:u1, i3 in (i2+1):u1
+    for i2 in 1:u1, i3 in (i2+1):u1
         s1, s2 = st_[i2], st_[i3]
 
         has1 = occursin(motif, s1)
@@ -435,21 +435,22 @@ end
 function make_vertices!(g, cdrs)
     isblank(x) = x === nothing || x === missing || x in ("None", "none", "NA", "na", "Na", " ", "  ", "")
 
-    for row in nrow(df)
+    for row in nrow(cdrs)
 
-        add_vertex!(g, Symbol(cdrs.cdr3[row]), Dict(:index => row)) # add vertex
+        label = String(cdrs.cdr3[row])
+        add_vertex!(g, label, Dict(:index => row)) # add vertex
 
         # check for vgenes, etc. and store if they exist
         if !isblank(cdrs.v_gene[row])
-            g[Symbol(row)][:vgene] = cdrs.v_gene[row]
+            g[label][:vgene] = cdrs.v_gene[row]
         end
 
         if !isblank(cdrs.j_gene[row])
-            g[Symbol(row)][:jgene] = cdrs.j_gene[row]
+            g[label][:jgene] = cdrs.j_gene[row]
         end
 
         if !isblank(cdrs.d_gene[row])
-            g[Symbol(row)][:dgene] = cdrs.d_gene[row]
+            g[label][:dgene] = cdrs.d_gene[row]
         end
 
     end
@@ -459,12 +460,12 @@ function make_vertices!(g, cdrs)
 end
 
 # make a global edge w/ annotation of hamming disrance
-function add_global_edge!(g, u, v, distance::Int64)
+function add_global_edge!(g, u, v, distance)
     add_edge!(g, u, v, Dict(:distance => distance))
 end
 
 # add a local edge w/ annotation of motif and the pval (from get_significant_motifs)
-function add_local_edge!(g, u, v, motif::String, pval::Int64)
+function add_local_edge!(g, u, v, motif::String, pval)
     add_edge!(g, u, v, Dict(:motif => motif, :mpval => pval))
 end
 
@@ -483,7 +484,7 @@ function make_edges(cdrs, motifs, isglobal, islocal)
     # # changed so label is cdr3
     if isglobal == true
         pairs, dists = make_distance(cdrs.cdr3)
-        for (index, (cdr1, cdr2)) in enumerate(pairs)
+        @showprogress desc = "Making global edges..." for (index, (cdr1, cdr2)) in enumerate(pairs)
             d = dists[index]
             if d <= 1
 
@@ -503,7 +504,7 @@ function make_edges(cdrs, motifs, isglobal, islocal)
 
     # TODO: next do local edges
     if islocal == true
-        for (m, pval) in motifs
+        @showprogress desc = "local edges..." for (m, pval) in motifs
             pairs2, hasmotif = make_motif_pairs(cdrs.cdr3, m)
 
             for (index, (cdr1, cdr2)) in enumerate(pairs2)
