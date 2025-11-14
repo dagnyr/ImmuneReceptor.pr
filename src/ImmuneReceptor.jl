@@ -488,7 +488,7 @@ function make_edges(cdrs, motifs, isglobal, islocal)
     if isglobal == true
         pairs, dists = make_distance(cdr3_vec)
 
-            @showprogress desc = "Making global edges..." for (index, (i, j)) in enumerate(pairs)
+            @showprogress desc = "Making edges..." for (index, (i, j)) in enumerate(pairs)
                 d = dists[index]
                 if d <= 1
                     # i, j are indices into cdr3_vec
@@ -507,7 +507,7 @@ function make_edges(cdrs, motifs, isglobal, islocal)
     # TODO: next do local edges
     if islocal == true
 
-       @showprogress desc = "Making local edges..." for (motif, pval) in motifs
+       @showprogress desc = "Making edges..." for (motif, pval) in motifs
 
             mask  = occursin.(Ref(motif), cdr3_vec)
             matches  = findall(mask)
@@ -620,6 +620,7 @@ end
 
 using Distributions
 
+# ✅ checked
 function score_vgene(g)
     clusters = connected_components(g)
 
@@ -652,7 +653,7 @@ function score_vgene(g)
             # TO DO = verify if below is correct
 
             for (vgene, count_) in di
-                distribution = Hypergeometric(totals[vgene], sum(collect(values(sizes))) - totals[vgene], sizes[index])
+                distribution = Hypergeometric(totals[vgene], sum(sizes) - totals[vgene], sizes[index])
                 p = ccdf(distribution, count_ - 1)
                 p_vals[vgene] = p
             end
@@ -685,15 +686,13 @@ function score_vgene(g)
 
             for (vgene, wins) in sim_wins
                 p = (wins + 1) / 1001
-                p_vals[vgene] = get!(p_vals, vgene, 0) + p
+                p_vals[vgene] = p
             end
 
         end
 
-        # pick and report min p-val and corresponding vgene for cluster
-
-        val, key = findmin(p_vals)
-        cluster_pvals[index] = Dict(key => (val * length(p_vals))) # multiple tests correction
+        val, key = findmin(p_vals)   # val = pval (Float64), key = vgene (String)
+        cluster_pvals[index] = Dict(key => (val * length(p_vals)))
 
     end
 
@@ -762,7 +761,7 @@ function score_hla(g, df)
 
             # check that i am doing this correctly too:
             # need # samples w/ HLA type overall, # samples w/o HLA type total, number of samples??
-            distribution = Hypergeometric(totals[hla], sum(collect(values(sizes))) - totals[hla], sizes[index])
+            distribution = Hypergeometric(totals[hla], sum(sizes) - totals[hla], sizes[index])
             p = ccdf(distribution, count_ - 1)
             p_vals[hla] = p
 
