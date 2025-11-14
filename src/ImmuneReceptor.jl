@@ -18,40 +18,41 @@ using Nucleus
 # Reading
 # =============================================================================================== #
 
+# ✅ checked
 function is_t_gene(::Any)
 
     false
 
 end
 
+# ✅ checked
 function is_t_gene(st::AbstractString)
 
     startswith(st, 'T')
 
 end
 
+# ✅ checked
 function is_cdr3(st)
 
     st[1] == 'C' && st[end] == 'F'
 
 end
 
+# ✅ checked
 function load_cdr3s(csvpath)
     df = CSV.read(csvpath, DataFrame)
-    filtered_df = df[
-        (df.chain.∈[
-            "TRG",
-            "TRD",
-            "TRA",
-            "TRB",
-        ]).&.!(
-            df.tcr_gene .∈ ["None", "none", "NA", "na", " "],
-        ).&.!(
-            df.cdr3 .∈ ["None", "none", "NA", "na", " "],
-        ).&startswith.(df.cdr3, "C").&endswith.(df.cdr3, "F"),
-        :,
-    ]
-    filtered_df_2 = combine(groupby(filtered_df, :cdr3), nrow => :duplicate_count)
+    chain_keep_a = df.chain .∈ Ref(["TRG", "TRD", "TRA", "TRB"])
+    chain_keep_b = .!(df.chain .∈ Ref(["None", "none", "NA", "na", " ", "Multi"]))
+    cdr3_keep  = .!(df.cdr3 .∈ Ref(["None", "none", "NA", "na", " "]))
+    c_check = startswith.(df.cdr3, "C")
+    f_check = endswith.(df.cdr3, "F")
+
+    mask = c_check .& chain_keep_a .& chain_keep_b .& cdr3_keep .& f_check
+
+    filtered_df = df[mask, :]
+
+    filtered_df_2 = transform(groupby(filtered_df, :cdr3), nrow => :duplicate_count)
     return filtered_df_2
 end
 
@@ -121,12 +122,14 @@ end
 # CDR3
 # =============================================================================================== #
 
+# ✅ checked
 function make_hamming_distance(s1, s2)
 
     sum(s1[nd] != s2[nd] for nd in eachindex(s1))
 
 end
 
+# ✅ checked
 function make_distance(st_)
 
     u1 = lastindex(st_)
@@ -166,6 +169,8 @@ end
 # =============================================================================================== #
 
 # count whether motif is present at least once per cdr3 for all cdr3s
+
+# ✅ checked
 function get_motif_counts(
     motif::AbstractVector{<:AbstractString},
     cdrs::AbstractVector{<:AbstractString},
@@ -183,6 +188,7 @@ function get_motif_counts(
 
 end
 
+# ✅ checked
 # makes list of motifs in cdr3s, counts them, filters based on a cutoff, then provides set count
 function get_motifs(st_::AbstractVector{<:AbstractString}, min::Int, max::Int)
 
@@ -222,18 +228,22 @@ function find_significant_motifs(motifs, cdrs1, cdrs2)
 
     Random.seed!(1)
 
-    motifs_list = collect(keys(motifs))
-    counts_orig = collect(values(motifs))
 
-    counts_sim = Array{Float64}(undef, 1000, length(motifs_list))
+    motifs_list = collect(keys(motifs))
+    L = length(motifs_list)
+    counts_orig = [motifs[m] for m in motifs_list]
+
+    counts_sim = Array{Float64}(undef, 200, length(motifs_list))
 
     significant_motifs = Dict{String,Float64}()
 
-    @showprogress desc = "Generating randomly sampled groups..." for i in 1:1000
+    @showprogress desc = "Generating simulated counts..." for i in 1:200
 
         random_cdrs = sample(cdrs2, length(cdrs1); replace=true, ordered=false)
         random_counts = get_motif_counts(motifs_list, random_cdrs)
-        counts_sim[i, :] = collect(values(random_counts))
+        for j in 1:L
+            counts_sim[i, j] = get(random_counts, motifs_list[j], 0)
+        end
 
     end
 
@@ -246,9 +256,16 @@ function find_significant_motifs(motifs, cdrs1, cdrs2)
                (counts_orig[index] == 3 && ove >= 100) ||
                (counts_orig[index] >= 4 && ove >= 10)
 
+            k_obs = counts_orig[index]
+            mu_sim = mean(@view counts_sim[:, index])
+            mx_sim = maximum(@view counts_sim[:, index])
+
+            @info "motif debug" motif=m k_obs k_mean_sim=mu_sim k_max_sim=mx_sim
+
             wins = count(x -> x >= counts_orig[index], counts_sim[:, index])
-            p_val = (wins + 1) / (1000 + 1)
-            if p_val >= 0.05
+            p_val = (wins + 1) / (200 + 1)
+            print(p_val)
+            if p_val <= 0.5
                 significant_motifs[m] = get!(significant_motifs, m, 0.0) + p_val
             end
 
@@ -256,6 +273,72 @@ function find_significant_motifs(motifs, cdrs1, cdrs2)
 
     end
 
+    println(string("Number of significant motifs identified:", length(significant_motifs)))
+    return significant_motifs
+
+end
+
+
+# __________ EDIRTING FUNCTION BELOW __________________#
+
+function find_significant_motifs(motifs, cdrs1, cdrs2, nsim, ove_cutoff)
+
+    Random.seed!(1)
+
+    motifs_list = collect(keys(motifs))
+    L = length(motifs_list)
+    counts_orig = [motifs[m] for m in motifs_list]
+
+    counts_sim = Array{Float64}(undef, nsim, length(motifs_list))
+
+    significant_motifs = Dict{String,Float64}()
+
+    @showprogress desc = "Generating simulated counts..." for i in 1:nsim
+
+        random_cdrs = sample(cdrs2, length(cdrs1); replace=true, ordered=false)
+        random_counts = get_motif_counts(motifs_list, random_cdrs)
+        for j in 1:L
+            counts_sim[i, j] = get(random_counts, motifs_list[j], 0)
+        end
+
+    end
+
+    # everything above this line works
+
+    @showprogress desc = "Calculating significant motifs..." for (index, m) in enumerate(motifs_list)
+
+        if ove_cutoff == true
+            ove = counts_orig[index] / mean(counts_sim[:, index])
+
+            if counts_orig[index] < 2
+                continue
+
+            elseif (counts_orig[index] == 2 && ove >= 1000) ||
+                (counts_orig[index] == 3 && ove >= 100) ||
+                (counts_orig[index] >= 4 && ove >= 10)
+
+                wins = count(x -> x >= counts_orig[index], counts_sim[:, index])
+                p_val = (wins) / (nsim)
+                #print(p_val)
+                if p_val <= 0.05
+                    significant_motifs[m] = get!(significant_motifs, m, 0.0) + p_val
+                end
+
+            end
+        end
+
+        if ove_cutoff != true
+            wins = count(x -> x >= counts_orig[index], counts_sim[:, index])
+            p_val = (wins) / (nsim)
+            print(p_val)
+            if p_val <= 0.05
+                significant_motifs[m] = get!(significant_motifs, m, 0.0) + p_val
+            end
+        end
+
+    end
+
+    println(string("Number of significant motifs identified:", length(significant_motifs)))
     return significant_motifs
 
 end
