@@ -293,7 +293,7 @@ function find_significant_motifs(motifs, cdrs1, cdrs2, nsim, ove_cutoff)
 
     significant_motifs = Dict{String,Float64}()
 
-    @showprogress desc = "Generating simulated counts..." for i in 1:nsim
+    @showprogress desc = "Calculating significant motifs..." for i in 1:nsim
 
         random_cdrs = sample(cdrs2, length(cdrs1); replace=true, ordered=false)
         random_counts = get_motif_counts(motifs_list, random_cdrs)
@@ -305,10 +305,12 @@ function find_significant_motifs(motifs, cdrs1, cdrs2, nsim, ove_cutoff)
 
     # everything above this line works
 
-    @showprogress desc = "Calculating significant motifs..." for (index, m) in enumerate(motifs_list)
+    for (index, m) in enumerate(motifs_list)
 
         if ove_cutoff == true
             ove = counts_orig[index] / mean(counts_sim[:, index])
+            print("slay")
+            print(counts_orig[index])
 
             if counts_orig[index] < 2
                 continue
@@ -318,7 +320,7 @@ function find_significant_motifs(motifs, cdrs1, cdrs2, nsim, ove_cutoff)
                 (counts_orig[index] >= 4 && ove >= 10)
 
                 wins = count(x -> x >= counts_orig[index], counts_sim[:, index])
-                p_val = (wins) / (nsim)
+                p_val = (wins + 1) / (nsim + 1)
                 #print(p_val)
                 if p_val <= 0.05
                     significant_motifs[m] = get!(significant_motifs, m, 0.0) + p_val
