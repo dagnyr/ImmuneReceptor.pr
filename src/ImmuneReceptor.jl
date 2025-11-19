@@ -553,7 +553,7 @@ end
 using StatsBase: mode
 
 # ✅ checked and works!
-function find_length_pvals(g, cdrs2)
+function find_length_pvals(g, cdrs2, sim_depth)
     clusters = connected_components(g)
 
     modes = Vector{Int}()
@@ -578,14 +578,14 @@ function find_length_pvals(g, cdrs2)
 
         sim_props = Float64[]
 
-        for i in 1:1000
+        for i in 1:sim_depth
             random_cdrs = sample(cdrs2, size; replace=true, ordered=false)
             cluster_lengths = [length(s) for s in random_cdrs]
             push!(sim_props, (count(==(modes[index]), cluster_lengths)) / size)
         end
 
         # count number of times sim beats data?
-        p_val = ((count(>=(props[index]), sim_props)) + 1) / 1001
+        p_val = ((count(>=(props[index]), sim_props)) + 1) / (sim_depth + 1)
         push!(p_vals, p_val)
 
     end
@@ -622,7 +622,7 @@ end
 using Distributions
 
 # ✅ checked
-function score_vgene(g)
+function score_vgene(g, sim_depth)
     clusters = connected_components(g)
 
     # make vector w/ dictionary of vgenes
@@ -663,7 +663,7 @@ function score_vgene(g)
 
             sim_wins = Dict{String,Int}()
 
-            for i in 1:1000 # do 1000 random pulls from the samples and count vgenes
+            for i in 1:sim_depth # do sim_depth random pulls from the samples and count vgenes
 
                 # sizes[index] has cluster size - stored in earlier loop
                 random_vgenes = sample(v_all, sizes[index]; replace=true, ordered=false)
@@ -686,7 +686,7 @@ function score_vgene(g)
             # go through sim wins + gen new dictionary
 
             for (vgene, wins) in sim_wins
-                p = (wins + 1) / 1001
+                p = (wins + 1) / (sim_depth + 1)
                 p_vals[vgene] = p
             end
 
