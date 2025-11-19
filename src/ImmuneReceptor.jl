@@ -716,71 +716,101 @@ end
 
 
 # hla score
-#
 
-function score_hla(g, df)
+# for each CDR, get donor
+# check hla file for shared hlas
+# do enrichment exactly as done for v-genes
 
-    clusters = connected_components(g)
+function allele_group(allele::String)
+    m = match(r"^(HLA-)?([A-Z]{1,4}\d?)", allele)
+    return m === nothing ? allele : m.captures[end]
+end
+
+function score_hla(g)
+    clusters = connected_components(g, hla_df)
+
+    # make dictionaries and vectors to store stuff in ✅
     counts = Vector{Dict{String,Int}}(undef, length(clusters))
-    totals = Dict{String,Int}() # store total counts
+
+    totals = Vector{Dict{String,Int}}(undef, length(ncol(hla_df)-1))) # length of hla typing dataframe is number of cols minus 1 (t)
+    for i in eachindex(totals)
+        totals[i] = Dict{String,Int}()
+    end
+
     sizes = Vector{Int}(undef, length(clusters))
 
-    for (index, cluster) in enumerate(clusters)
+    for (index, cluster) in enumerate(clusters) # count things ✅
 
         di = Dict{String,Int}()
         sizes[index] = length(cluster)
 
         for vertex in cluster
 
-            sample = g[label_for(g, vertex)][:sample] # should be fixed now!
+            sample = g[label_for(g, vertex)][:sample]
 
-            row_w_sample = filter(row -> row.sample == sample, df)
+            row_index = occursin.(sample, hla_df.donor)
+            row_as_vector = collect(hla_df[row_index, :])
 
-            vector = x
+            for (index2, allele) in enumerate(row_as_vector)
 
-            for hla in vector
-                di[hla] = get!(di, hla, 0) + 1
-                totals[hla] = get!(totals, hla, 0) + 1
+                totals[index2][allele] = get(totals[index2], allele, 0) + 1 # store total counts for distribution to compare cluster to
+                di[allele] = get!(di, allele, 0) + 1
+
             end
+
 
         end
 
-        counts[index] = di
+        counts[index] = di # store individual counts for each cluster
 
     end
 
-    # ___ end of counting __ #
-    #
+    # compare counts
 
-    # go through counts and compare to totals
+    # interate through totals.
+    # for each index in totals, get counts.
+    # then go through each cluster, retrieve HLA counts.
+    # compare and complete fisher's exact test for each cluster
+    # generate p-val for each allele and then report back a table with each allele group, the most enriched HLA allele, and the p-individual
+
+    # make p-vals for each cluster
+
+    cluster_pvals = Vector{Dict{String,Float64}}(undef, length(clusters))
 
     for (index, di) in enumerate(counts)
 
+        counts[index]
         p_vals = Dict{String,Float64}()
 
-        for (hla, count_) in di
+        for (hla_, count_) in di
 
-            # check that i am doing this correctly too:
-            # need # samples w/ HLA type overall, # samples w/o HLA type total, number of samples??
-            distribution = Hypergeometric(totals[hla], sum(sizes) - totals[hla], sizes[index])
+            distribution = Hypergeometric(totals[index][hla_], sum(sizes) - totals[index][hla_], sizes[index])
             p = ccdf(distribution, count_ - 1)
-            p_vals[hla] = p
+            p_vals[hla_] = p
 
         end
 
-        # after gathering all p-vals, calculate no. of significant hla types per cluster potentially?
+        cluster_pvals[index] = p_vals
 
     end
 
-    # load HLA donor stuff
+    # generate table
 
-    # load clusters
+    pval_df = DataFrame(cluster=Int[], allele=String[], allele_group=String[], pval=Float64[])
 
-    # go through each cluster and count HLA frequency
-    # do hypergeometric test for every HLA type
+    for (cluster, d) in pairs(cluster_pvals)
+        for (allele, p) in d
+            group = allele_group(allele)
+            push!(rows, (
+                cluster = cluster,
+                allele  = allele,
+                group   = group,
+                pval    = p
+            ))
+        end
+    end
 
-    # get background hla frequency for donors
-    # check hla frequency per cluster
-    # do hypergeometric test
+    return pval_df
+    # heatmap_df = unstack(df, :cluster, :allele, :pval)
 
 end
