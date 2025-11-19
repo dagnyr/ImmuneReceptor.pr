@@ -732,11 +732,7 @@ function score_hla(g)
     # make dictionaries and vectors to store stuff in ✅
     counts = Vector{Dict{String,Int}}(undef, length(clusters))
 
-    totals = Vector{Dict{String,Int}}(undef, length(ncol(hla_df)-1))) # length of hla typing dataframe is number of cols minus 1 (t)
-    for i in eachindex(totals)
-        totals[i] = Dict{String,Int}()
-    end
-
+    totals = Dict{String,Int}()
     sizes = Vector{Int}(undef, length(clusters))
 
     for (index, cluster) in enumerate(clusters) # count things ✅
@@ -748,12 +744,21 @@ function score_hla(g)
 
             sample = g[label_for(g, vertex)][:sample]
 
-            row_index = occursin.(sample, hla_df.donor)
-            row_as_vector = collect(hla_df[row_index, :])
+            row_index = findfirst(==(sample), hla_df.donor)
+            row_index === nothing && continue # skip typing for donors without HLA type
+            row = hla_df[row_index, 2:end]
 
-            for (index2, allele) in enumerate(row_as_vector)
+            for allele in row
 
-                totals[index2][allele] = get(totals[index2], allele, 0) + 1 # store total counts for distribution to compare cluster to
+                if ismissing(allele)
+
+                    continue
+
+                end
+
+                a = String(allele) # needs to be string
+
+                totals[allele] = get(totals, allele, 0) + 1 # store total counts for distribution to compare cluster to
                 di[allele] = get!(di, allele, 0) + 1
 
             end
@@ -764,16 +769,6 @@ function score_hla(g)
         counts[index] = di # store individual counts for each cluster
 
     end
-
-    # compare counts
-
-    # interate through totals.
-    # for each index in totals, get counts.
-    # then go through each cluster, retrieve HLA counts.
-    # compare and complete fisher's exact test for each cluster
-    # generate p-val for each allele and then report back a table with each allele group, the most enriched HLA allele, and the p-individual
-
-    # make p-vals for each cluster
 
     cluster_pvals = Vector{Dict{String,Float64}}(undef, length(clusters))
 
@@ -801,7 +796,7 @@ function score_hla(g)
     for (cluster, d) in pairs(cluster_pvals)
         for (allele, p) in d
             group = allele_group(allele)
-            push!(rows, (
+            push!(pval_df, (
                 cluster = cluster,
                 allele  = allele,
                 group   = group,
