@@ -436,7 +436,7 @@ function make_barcode_vertices!(g, cdrs)
 
     return g
 
-end # end of barcode vertices
+end
 
 # make a global edge w/ annotation of hamming disrance
 function add_global_edge!(g, u, v, distance)
@@ -461,6 +461,120 @@ function make_edges(cdrs, motifs, isglobal, islocal)
     )
 
     g = make_vertices!(g, cdrs)
+
+    # start w/ global distances
+    # # changed so label is cdr3
+    if isglobal == true
+        pairs, dists = make_distance(cdr3_vec)
+
+            @showprogress desc = "Making edges..." for (index, (i, j)) in enumerate(pairs)
+                d = dists[index]
+                if d <= 1
+                    # i, j are indices into cdr3_vec
+                    u = cdr3_vec[i]
+                    v = cdr3_vec[j]
+
+                    if haskey(g, u, v)
+                        g[u, v][:distance] = d
+                    else
+                        add_global_edge!(g, u, v, d)
+                    end
+                end
+            end
+    end
+
+    # TODO: next do local edges
+    if islocal == true
+
+       @showprogress desc = "Making edges..." for (motif, pval) in motifs
+
+            mask  = occursin.(Ref(motif), cdr3_vec)
+            matches  = findall(mask)
+            nmatches = length(matches)
+
+            # nothing to do if fewer than 2 sequences have this motif
+            if nmatches <= 1
+                continue
+            end
+
+            # all unique pairs of those indices
+            for i in 1:(nmatches-1), j in (i+1):nmatches
+                u = cdr3_vec[matches[i]]
+                v = cdr3_vec[matches[j]]
+
+                if haskey(g, u, v)
+                    g[u, v][:motif] = motif
+                    g[u, v][:mpval] = pval
+                else
+                    add_local_edge!(g, u, v, motif, pval)
+                end
+            end
+        end
+    end # end of local edges
+
+    return g
+
+end
+
+function get_cdr3s_for_vertex_chain(g, cdrs, bc::String, chain::String) # get cdr3s from graph indices for each barcode
+    vertex = g[bc]
+    haskey(vertex, :cdr3_rows_by_chain) || return String[]
+    rows = get(vertex[:cdr3_rows_by_chain], chain, Int[])
+    return String.(cdrs.cdr3[rows]) # retrieve list of all cdr3s for that barcode
+end
+
+function add_edges_single_chain!(
+    g,
+    cdrs;
+    chain::String = "TRB",
+    max_distance::Int = 1,
+)
+
+    barcodes = collect(labels(g))
+    n = length(barcodes)
+
+    @showprogress desc = "Adding $chain edges..." for i in 1:(n-1)
+
+        bc_1   = barcodes[i]
+        cdr3s_1 = get_cdr3s_for_vertex_chain(g, cdrs, bc_1, chain)
+        isempty(cdr3s_1) && continue
+
+        for j in (i+1):n
+
+            bc_2   = barcodes[j]
+            cdr3s_2 = get_cdr3s_for_vertex_chain(g, cdrs, bc_2, chain)
+            isempty(cdr3s_2) && continue
+
+            for s1 in cdr3s_1, s2 in cdr3s_2
+
+                length(s1) == length(s2) || continue
+                d = make_hamming_distance(s1, s2)  # your existing function
+
+                # if distance below cutoff por equal, continue
+                #
+                # add global edge as before
+
+
+            end
+
+        end
+
+    end
+
+end
+
+function make_barcode_edges(cdrs, motifs, isglobal, islocal)
+
+    cdr3_vec = String.(cdrs.cdr3)
+
+    g = MetaGraph(
+        Graph();
+        label_type=String,
+        vertex_data_type=Dict{Symbol,Any},
+        edge_data_type=Dict{Symbol,Any},
+    )
+
+    g = make_barcode_vertices!(g, cdrs)
 
     # start w/ global distances
     # # changed so label is cdr3
