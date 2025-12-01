@@ -223,64 +223,6 @@ function get_motifs(st_::AbstractVector{<:AbstractString}, min::Int, max::Int)
 
 end
 
-# input will be motif_counts dictionary/table
-function find_significant_motifs(motifs, cdrs1, cdrs2)
-
-    Random.seed!(1)
-
-
-    motifs_list = collect(keys(motifs))
-    L = length(motifs_list)
-    counts_orig = [motifs[m] for m in motifs_list]
-
-    counts_sim = Array{Float64}(undef, 200, length(motifs_list))
-
-    significant_motifs = Dict{String,Float64}()
-
-    @showprogress desc = "Generating simulated counts..." for i in 1:200
-
-        random_cdrs = sample(cdrs2, length(cdrs1); replace=true, ordered=false)
-        random_counts = get_motif_counts(motifs_list, random_cdrs)
-        for j in 1:L
-            counts_sim[i, j] = get(random_counts, motifs_list[j], 0)
-        end
-
-    end
-
-    @showprogress desc = "Calculating significant motifs..." for (index, m) in enumerate(motifs_list)
-        ove = counts_orig[index] / mean(counts_sim[:, index])
-
-        if counts_orig[index] < 2
-            continue
-        elseif (counts_orig[index] == 2 && ove >= 1000) ||
-               (counts_orig[index] == 3 && ove >= 100) ||
-               (counts_orig[index] >= 4 && ove >= 10)
-
-            k_obs = counts_orig[index]
-            mu_sim = mean(@view counts_sim[:, index])
-            mx_sim = maximum(@view counts_sim[:, index])
-
-            @info "motif debug" motif=m k_obs k_mean_sim=mu_sim k_max_sim=mx_sim
-
-            wins = count(x -> x >= counts_orig[index], counts_sim[:, index])
-            p_val = (wins + 1) / (200 + 1)
-            print(p_val)
-            if p_val <= 0.5
-                significant_motifs[m] = get!(significant_motifs, m, 0.0) + p_val
-            end
-
-        end
-
-    end
-
-    println(string("Number of significant motifs identified:", length(significant_motifs)))
-    return significant_motifs
-
-end
-
-
-# __________ EDIRTING FUNCTION BELOW __________________#
-
 function find_significant_motifs(motifs, cdrs1, cdrs2, nsim, ove_cutoff)
 
     Random.seed!(1)
@@ -375,15 +317,6 @@ function make_motif_pairs(st_::AbstractVector{<:AbstractString}, motif)
     return in__, po_
 end
 
-
-# TO DO:
-# 1) using counts table from above, run simulations on reference dataset + count occurances of all motifs (say sim depth = 1000 for now) ✅
-# 1.5) find significant motifs base on these simulations ✅
-# 2) filter the motif table from above and then filter the positions table based on the filtered count table (NOT DOING POSITION TRACKING FOR NOW) ❎
-# 3) using the filtered significant motifs positions table, then draw local edges for cdr3s with:
-#   a) same length
-#   b) motif appearance has max overlap difference of x amino acids
-
 #_________#
 
 function get_motif(s1::AbstractString, um)
@@ -432,7 +365,9 @@ end
 # Graphing
 # =============================================================================================== #
 
-function make_vertices!(g, cdrs)
+# TO DO: change label of vertices to the cell barcode, to allow for pairing analyses.
+
+function make_cdr3_vertices!(g, cdrs)
     isblank(x) = x === nothing || x === missing || x in ("None", "none", "NA", "na", "Na", " ", "  ", "")
 
     for row in 1:nrow(cdrs)
@@ -458,6 +393,50 @@ function make_vertices!(g, cdrs)
     return g # return graph
 
 end
+
+function make_barcode_vertices!(g, cdrs)
+    isblank(x) = x === nothing || x === missing || x in ("None", "none", "NA", "na", "Na", " ", "  ", "", "   ")
+
+    if :row_index ∉ names(cdrs)
+            cdrs.row_index = collect(1:nrow(cdrs))
+        end
+
+    grouped_by_barcode = groupby(cdrs, :barcode)
+
+    chain_rows = Dict{String, Vector{Int}}()
+
+    for (i, subgroup) in enumerate(grouped_by_barcode)
+
+        bc = String(sub.subgroup[1]) # get barcode for group
+
+        if !has_vertex(g, bc)
+            add_vertex!(g, bc, Dict(:index => i, :barcode => bc))
+        end
+
+        for row in 1:nrow(subgroup) # make dictionary for each vertex (barcode) of all chains for that barcode w/ row index
+
+            if !isblank(subgroup.chain[row])
+                chain = String(subgroup.chain[row])
+            end
+
+            chain_index = subgroup.row_index[row]  # original row index in `cdrs`
+
+            chain_row_pair = get!(chain_rows, chain, Int[])
+            push!(chain_row_pair, chain_index)
+
+        end
+
+        g[bc][:chains] = chain_rows # add dictionary to vertex
+
+        if :sample ∈ names(subgroup) && !isblank(subgroup.sample[1]) # add sample if it exisrts
+            g[bc][:sample] = subgroup.sample[1]
+        end
+
+    end # end of subgroup loop
+
+    return g
+
+end # end of barcode vertices
 
 # make a global edge w/ annotation of hamming disrance
 function add_global_edge!(g, u, v, distance)
