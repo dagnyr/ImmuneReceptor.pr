@@ -523,47 +523,7 @@ function get_cdr3s_for_vertex_chain(g, cdrs, bc::String, chain::String) # get cd
     return String.(cdrs.cdr3[rows]) # retrieve list of all cdr3s for that barcode
 end
 
-function add_edges_single_chain!(
-    g,
-    cdrs;
-    chain::String = "TRB",
-    max_distance::Int = 1,
-)
-
-    barcodes = collect(labels(g))
-    n = length(barcodes)
-
-    @showprogress desc = "Adding $chain edges..." for i in 1:(n-1)
-
-        bc_1   = barcodes[i]
-        cdr3s_1 = get_cdr3s_for_vertex_chain(g, cdrs, bc_1, chain)
-        isempty(cdr3s_1) && continue
-
-        for j in (i+1):n
-
-            bc_2   = barcodes[j]
-            cdr3s_2 = get_cdr3s_for_vertex_chain(g, cdrs, bc_2, chain)
-            isempty(cdr3s_2) && continue
-
-            for s1 in cdr3s_1, s2 in cdr3s_2
-
-                length(s1) == length(s2) || continue
-                d = make_hamming_distance(s1, s2)  # your existing function
-
-                # if distance below cutoff por equal, continue
-                #
-                # add global edge as before
-
-
-            end
-
-        end
-
-    end
-
-end
-
-function make_barcode_edges(cdrs, motifs, isglobal, islocal)
+function make_barcode_graph(g, cdrs)
 
     cdr3_vec = String.(cdrs.cdr3)
 
@@ -576,59 +536,76 @@ function make_barcode_edges(cdrs, motifs, isglobal, islocal)
 
     g = make_barcode_vertices!(g, cdrs)
 
-    # start w/ global distances
-    # # changed so label is cdr3
-    if isglobal == true
-        pairs, dists = make_distance(cdr3_vec)
-
-            @showprogress desc = "Making edges..." for (index, (i, j)) in enumerate(pairs)
-                d = dists[index]
-                if d <= 1
-                    # i, j are indices into cdr3_vec
-                    u = cdr3_vec[i]
-                    v = cdr3_vec[j]
-
-                    if haskey(g, u, v)
-                        g[u, v][:distance] = d
-                    else
-                        add_global_edge!(g, u, v, d)
-                    end
-                end
-            end
-    end
-
-    # TODO: next do local edges
-    if islocal == true
-
-       @showprogress desc = "Making edges..." for (motif, pval) in motifs
-
-            mask  = occursin.(Ref(motif), cdr3_vec)
-            matches  = findall(mask)
-            nmatches = length(matches)
-
-            # nothing to do if fewer than 2 sequences have this motif
-            if nmatches <= 1
-                continue
-            end
-
-            # all unique pairs of those indices
-            for i in 1:(nmatches-1), j in (i+1):nmatches
-                u = cdr3_vec[matches[i]]
-                v = cdr3_vec[matches[j]]
-
-                if haskey(g, u, v)
-                    g[u, v][:motif] = motif
-                    g[u, v][:mpval] = pval
-                else
-                    add_local_edge!(g, u, v, motif, pval)
-                end
-            end
-        end
-    end # end of local edges
-
     return g
 
 end
+
+function make_global_edges(g, cdrs; chain::String = "TRB", max_distance::Int = 1,)
+
+    # subset dataframe to specific chain and get list of barcodes
+
+    filtered_cdrs = subset(cdrs, :chain => ByRow(x -> x == chain))
+
+    #barcodes = unique(filtered_cdrs.barcode)
+
+    # using filtered df, make distances
+    # go through index pairs and distances and check cutoff
+    # if cutoff is good, find the row_index and add a global edge annotated with the specific chain
+
+    cdr3s = String.(filtered_cdrs.cdr3)
+
+    index_pairs, dists = make_distance(cdr3s)
+
+    for (index, (i, j)) in enumerate(pairs)
+
+        d = dists[index]
+
+        if d <= 1
+
+            bc_1 = String(filtered_cdrs.barcode[i])
+            bc_2 = String(filtered_cdrs.barcode[j])
+            cdr3_1 = String(filtered_cdrs.row_index[i])
+            cdr3_2 = String(filtered_cdrs.row_index[j])
+
+            bc_1 == bc_2 && continue
+
+            if !has_vertex(g, bc_1)
+                add_vertex!(g, bc_1, Dict(:barcode => bc_1))
+            end
+
+            if !has_vertex(g, bc_2)
+                add_vertex!(g, bc_2, Dict(:barcode => bc_2))
+            end
+
+            add_global_edge!(g, bc_1, bc_2, d)
+            g[bc_1, bc_2][:chains] = (cdr3_1, cdr3_2) # for now track the indices so that later people can go back to see pairs 4 the edges if they wany
+        end
+
+    end
+
+
+end
+
+function make_local_edges(g, cdrs; chain::String = "TRB", max_distance::Int = 1,)
+
+    filtered_cdrs = subset(cdrs, :chain => ByRow(x -> x == chain))
+
+    barcodes = unique(filtered_cdrs.barcode)
+
+
+
+    # subset dataframe to specific chain and get list of barcodes
+
+    # go through each vertex with those barcodes
+    # filter chain dictionary to only the specific chain
+    # then go through the indexes , i , i+1
+    # checkthrough every motif to see if they have any shared and add a local edge for that
+    # add a global edge for those with matches with a note on the cdr3 indexes involved in the edge
+
+
+
+end
+
 
 # to-do return list of communities and generate output file w/ all values
 #components = connected_components(g)
