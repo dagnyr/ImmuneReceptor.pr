@@ -12,10 +12,11 @@ using ProgressMeter: @showprogress
 
 using Nucleus
 
-# TO DO: add progress meters to longer running functions and scoring functions
+# TO DO (in progress) - allow for analysis of multiple chains per cell, paired graphing, etc.
+
 
 # =============================================================================================== #
-# Reading
+# Reading / Misc
 # =============================================================================================== #
 
 # ✅ checked
@@ -606,11 +607,6 @@ function make_local_edges(g, cdrs; chain::String = "TRB", max_distance::Int = 1,
 
 end
 
-
-# to-do return list of communities and generate output file w/ all values
-#components = connected_components(g)
-
-
 # =============================================================================================== #
 # Clusters / Significance
 #
@@ -622,7 +618,7 @@ end
 
 using StatsBase: mode
 
-# ✅ checked and works!
+# 📋 TO DO: change to use barcodes and use cdr table as a lookup to get cdr3 length
 function find_length_pvals(g, cdrs2, sim_depth)
     clusters = connected_components(g)
 
@@ -691,7 +687,8 @@ end
 
 using Distributions
 
-# ✅ checked
+# 📋 TO DO: change to use barcodes and use cdr table to find vgenes for each pair? cell? individual chain?
+# decide what to do re: that soon - might make sense to just score within all TRB, then TRA, TRG, etc. etc.
 function score_vgene(g, sim_depth)
     clusters = connected_components(g)
 
@@ -791,11 +788,14 @@ end
 # check hla file for shared hlas
 # do enrichment exactly as done for v-genes
 
+
 function allele_group(allele::String)
     m = match(r"^(HLA-)?([A-Z]{1,4}\d?)", allele)
     return m === nothing ? allele : m.captures[end]
 end
 
+# 📋 TO DO: check to make sure its fully working using some mock data w/ fake donor names and the test cdr3 dataset
+# also change to barcode system as above for other functions
 function score_hla(g)
     clusters = connected_components(g, hla_df)
 
